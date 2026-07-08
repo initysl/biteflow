@@ -1,0 +1,6 @@
+{
+  "name": "QR Restaurant Ordering",
+  "description": "A QR-code-based restaurant ordering application featuring a dynamic customer menu, real-time WebSocket order tracking for kitchen and waitstaff, and Stripe payment simulations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
