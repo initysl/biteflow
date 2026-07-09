@@ -187,7 +187,7 @@ export default function StaffDashboard() {
       });
       if (res.ok) {
         const updated = await res.json();
-        setAssistanceRequests(updated);
+        setAssistanceRequests(updated.requests);
       }
     } catch (e) {
       console.error('Resolve assistance failed:', e);
