@@ -24,6 +24,7 @@ import {
   Clock,
   HelpCircle,
   TrendingUp,
+  ConciergeBell,
 } from 'lucide-react';
 import { MenuItem, Order, OrderItem } from '../types';
 import StripeModal from './StripeModal';
@@ -466,7 +467,11 @@ export default function CustomerMenu({ tableId }: CustomerMenuProps) {
                     onClick={() => setIsAssistanceModalOpen(true)}
                     className='w-full bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-700 hover:text-gray-900 font-bold py-1.5 rounded-lg text-[10px] flex items-center justify-center gap-1 cursor-pointer transition-all'
                   >
-                    <span>🛎️ Call Staff / Request</span>
+                    <div className='flex items-center gap-1'>
+                      {' '}
+                      <ConciergeBell size={16} color='#363030' />
+                      Call Staff / Request
+                    </div>
                   </button>
                 )}
               </div>
@@ -498,7 +503,7 @@ export default function CustomerMenu({ tableId }: CustomerMenuProps) {
                   onClick={() => setIsLoyaltyModalOpen(true)}
                   className='w-full bg-amber-50 hover:bg-amber-100 border border-amber-100/50 text-amber-800 font-bold py-1.5 rounded-lg text-[10px] flex items-center justify-center gap-1 cursor-pointer transition-all'
                 >
-                  <Award className='w-3 h-3 text-amber-600' />
+                  <Award size={16} className=' text-amber-600' />
                   <span>Claim Rewards / History</span>
                 </button>
               </div>

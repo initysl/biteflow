@@ -162,12 +162,10 @@ export default function App() {
           {/* Clean Human-Centered Footer */}
           <footer
             id='app-footer'
-            className='bg-white border-t border-gray-100 py-6 text-center text-xs text-gray-400 shrink-0 mt-12 font-sans'
+            className='space-y-2 bg-white border-t border-gray-100 py-6 text-center text-xs text-gray-400 shrink-0 mt-12 font-sans'
           >
-            <p>
-              © 2026 BiteFlow. Fresh gourmet dining experiences. All rights
-              reserved.
-            </p>
+            <p>Fresh gourmet dining experiences</p>
+            <p>© 2026 BiteFlow. All rights reserved.</p>
           </footer>
         </motion.div>
       )}
