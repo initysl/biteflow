@@ -18,7 +18,7 @@ Kitchen staff and floor managers get a synchronized, real-time Kitchen Display S
 
 ## Key Features
 
-### 📱 Customer Experience (Table Kiosk)
+### Customer Experience (Table Kiosk)
 - **Instant Table QR Onboarding**: Table context is automatically extracted from URL query parameters (`?table=3`), binding diners directly to their table.
 - **Interactive Gourmet Menu**: Filter by categories (*Starters*, *Mains*, *Desserts*, *Craft Drinks*), search keywords, and dietary tags (*Vegetarian*, *Vegan*, *Gluten-Free*, *Chef's Special*).
 - **Customizable Orders & Add-ons**: Add dietary notes, cooking preferences (e.g. steak temperature), and allergies.
@@ -29,7 +29,7 @@ Kitchen staff and floor managers get a synchronized, real-time Kitchen Display S
 - **Payment Options**: Integrated Stripe Checkout Simulation (Cards, Apple Pay, Google Pay) and "Pay at Counter" options.
 - **Digital Folding Ticket**: Origami-inspired animated digital receipt with downloadable order summaries.
 
-### 👨‍🍳 Staff & Kitchen Management Console
+### Staff & Kitchen Management Console
 - **Real-Time Kanban Pipeline**: Orders dynamically arrive and progress across stages (*Pending*, *Preparing*, *Ready*, *Served*, *Paid*) with zero page refreshes.
 - **Multi-Station Kitchen Routing**: Filter kitchen tickets by prep stations (*All*, *Grill Station*, *Starters & Salads*, *Dessert & Pastry*, *Bar & Cocktails*).
 - **Table & Floor Management**: Visual floor grid tracking status for all tables (*Vacant*, *Occupied*, *Billing*, *Assistance Needed*).
@@ -40,7 +40,7 @@ Kitchen staff and floor managers get a synchronized, real-time Kitchen Display S
 
 ---
 
-## ⚡ Getting Started
+## Getting Started
 
 ### Prerequisites
 - **Node.js**: v18.0.0 or higher
@@ -82,7 +82,7 @@ To simulate a seated guest at a specific table, add the query parameter:
 
 ---
 
-## 🔄 WebSocket Event Protocol
+## WebSocket Event Protocol
 
 BiteFlow communicates in real time over WebSockets on `ws://<host>:<port>`:
 
