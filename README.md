@@ -65,8 +65,6 @@ Default configuration in `.env`:
 # Server Port (Defaults to 3000)
 PORT=3000
 
-# Optional: Google Gemini API Key for smart suggestions
-GEMINI_API_KEY=
 ```
 
 ### 3. Running in Development
