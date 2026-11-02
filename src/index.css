@@ -186,8 +186,8 @@
   --color-sidebar-border: var(--line);
   --color-sidebar-ring: var(--accent);
 
-  --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'Bricolage Grotesque Variable', 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Ubuntu', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Changa Variable', 'Ubuntu', ui-sans-serif, system-ui, sans-serif;
 
   --shadow-card: 0 1px 2px rgb(var(--shadow-color) / 0.06);
   --shadow-raised: 0 2px 4px rgb(var(--shadow-color) / 0.04), 0 10px 24px -8px rgb(var(--shadow-color) / 0.14);
@@ -241,10 +241,7 @@
     display: none;
   }
   .font-display {
-    font-optical-sizing: auto;
-    font-variation-settings:
-      'SOFT' 50,
-      'WONK' 0;
+    letter-spacing: -0.005em;
   }
   /* Scale-on-press feedback for anything tappable. */
   .pressable {

@@ -35,7 +35,7 @@ Light and dark themes, keyboard and screen-reader friendly, and respectful of `p
 
 ### Design
 
-- **Type:** [Bricolage Grotesque](https://fonts.google.com/specimen/Bricolage+Grotesque) for headings, prices and table numbers; [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) for everything else. Both are self-hosted via Fontsource.
+- **Type:** [Changa](https://fonts.google.com/specimen/Changa) for headings, prices and table numbers; [Ubuntu](https://fonts.google.com/specimen/Ubuntu) for everything else. Both are self-hosted via Fontsource.
 - **Colour:** a signal orange accent (`#D23F06`) with a yellow highlight, white cards on a warm-grey ground, and black price pills. Every token is defined once in `src/index.css`, with a separate dark-mode set, and text pairings are checked against WCAG AA.
 
 ## Quick start
