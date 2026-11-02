@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { DIETARY_LABELS, type MenuItem } from '@shared/schemas';
 import { cn } from '@/lib/cn';
 import { useMoney } from '@/lib/queries';
-import { FoodImage } from '@/ui/Display';
+import { FoodImage, PricePill } from '@/ui/Display';
 import { useCartLines, useCartStore } from '../cart/cartStore';
 import { useDiner } from './DinerLayout';
 
@@ -22,76 +22,92 @@ function useQuickAdd(item: MenuItem) {
   return { canAdd: canOrder && item.available, inCart, quickAdd, bump };
 }
 
+function AddButton({ item, size = 'md' }: { item: MenuItem; size?: 'md' | 'sm' }) {
+  const { canAdd, inCart, quickAdd, bump } = useQuickAdd(item);
+  if (!canAdd) return null;
+  return (
+    <button
+      type='button'
+      onClick={quickAdd}
+      aria-label={`Add ${item.name} to order`}
+      className={cn(
+        'pressable relative z-[1] inline-flex shrink-0 items-center justify-center gap-1 rounded-full bg-accent font-bold text-on-accent transition-colors hover:bg-accent-hover',
+        size === 'sm' ? 'h-9 min-w-9 px-2' : 'h-10 min-w-10 px-2.5',
+      )}
+    >
+      {inCart > 0 && (
+        <span key={bump} className='tabular animate-pop pl-1 text-sm'>
+          {inCart}
+        </span>
+      )}
+      <Plus className='size-4.5' strokeWidth={2.6} />
+    </button>
+  );
+}
+
+/** Grid card used in the menu sections. */
 export function MenuItemCard({ item, onOpen }: { item: MenuItem; onOpen: () => void }) {
   const money = useMoney();
-  const { canAdd, inCart, quickAdd, bump } = useQuickAdd(item);
+  const tag = !item.available ? null : item.dietary[0];
 
   return (
     <article
       className={cn(
-        'group relative flex h-full gap-4 rounded-2xl border border-line bg-surface p-3 shadow-card transition-[border-color,box-shadow] duration-200',
-        '[@media(hover:hover)]:hover:border-line-strong [@media(hover:hover)]:hover:shadow-raised',
-        !item.available && 'opacity-60',
+        'group relative flex h-full flex-col rounded-3xl bg-surface p-2 shadow-card transition-shadow duration-200',
+        '[@media(hover:hover)]:hover:shadow-raised',
       )}
     >
-      <button type='button' onClick={onOpen} className='absolute inset-0 z-0 rounded-2xl' aria-label={`View ${item.name}`} />
-      <div className='pointer-events-none relative z-[1] flex min-w-0 flex-1 flex-col py-1 pl-1'>
-        <h3 className='font-medium leading-snug'>{item.name}</h3>
-        <p className='mt-1 line-clamp-2 text-sm leading-relaxed text-ink-muted'>{item.description}</p>
-        <div className='mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-3'>
-          <span className='tabular font-medium'>{money(item.priceCents)}</span>
-          {!item.available ? (
-            <span className='text-xs font-medium text-danger'>Sold out</span>
-          ) : (
-            item.dietary.slice(0, 2).map((d) => (
-              <span key={d} className='text-xs text-ink-subtle'>
-                {DIETARY_LABELS[d]}
-              </span>
-            ))
-          )}
-        </div>
+      <button type='button' onClick={onOpen} className='absolute inset-0 z-0 rounded-3xl' aria-label={`View ${item.name}`} />
+      <div className='pointer-events-none relative'>
+        <FoodImage
+          src={item.imageUrl}
+          alt={item.name}
+          className={cn('aspect-[4/3] w-full rounded-[20px]', !item.available && 'opacity-50 grayscale')}
+        />
+        {!item.available ? (
+          <span className='absolute top-2 left-2 rounded-full bg-ink px-2.5 py-1 text-xs font-bold text-canvas'>Sold out</span>
+        ) : tag ? (
+          <span className='absolute top-2 left-2 rounded-full bg-surface/95 px-2.5 py-1 text-xs font-bold text-ink'>
+            {DIETARY_LABELS[tag]}
+          </span>
+        ) : null}
       </div>
-      <div className='pointer-events-none relative z-[1] shrink-0'>
-        <FoodImage src={item.imageUrl} alt={item.name} className='size-28 rounded-xl sm:size-32' />
-        {canAdd && (
-          <button
-            type='button'
-            onClick={quickAdd}
-            aria-label={`Add ${item.name} to order`}
-            className='pressable pointer-events-auto absolute -right-1.5 -bottom-1.5 inline-flex h-10 min-w-10 items-center justify-center gap-1 rounded-full border border-line bg-surface px-2.5 text-ink shadow-raised transition-colors hover:bg-surface-2'
-          >
-            {inCart > 0 ? (
-              <span key={bump} className='tabular animate-pop text-sm font-semibold text-accent'>
-                {inCart}
-              </span>
-            ) : null}
-            <Plus className='size-4.5' />
-          </button>
-        )}
+      <div className='pointer-events-none flex flex-1 flex-col px-1.5 pt-2.5 pb-1'>
+        <h3 className='line-clamp-2 text-[15px] leading-snug font-bold'>{item.name}</h3>
+        <p className='mt-0.5 line-clamp-1 hidden text-sm text-ink-muted sm:block'>{item.description}</p>
+        <div className='mt-auto flex items-center justify-between gap-2 pt-3'>
+          <PricePill>{money(item.priceCents)}</PricePill>
+          <span className='pointer-events-auto'>
+            <AddButton item={item} size='sm' />
+          </span>
+        </div>
       </div>
     </article>
   );
 }
 
-export function FeaturedCard({ item, onOpen }: { item: MenuItem; onOpen: () => void }) {
+/** Wide card for the chef's picks carousel. */
+export function PickCard({ item, onOpen }: { item: MenuItem; onOpen: () => void }) {
   const money = useMoney();
   return (
-    <button
-      type='button'
-      onClick={onOpen}
-      className='pressable group w-60 shrink-0 snap-start overflow-hidden rounded-2xl border border-line bg-surface text-left shadow-card sm:w-64'
-    >
-      <div className='relative aspect-[4/3] overflow-hidden'>
-        <FoodImage
-          src={item.imageUrl}
-          alt={item.name}
-          className='size-full transition-transform duration-500 ease-[var(--ease-out)] [@media(hover:hover)]:group-hover:scale-[1.03]'
-        />
+    <article className='relative w-64 overflow-hidden rounded-3xl bg-surface shadow-card sm:w-72'>
+      <button type='button' onClick={onOpen} className='absolute inset-0 z-0' aria-label={`View ${item.name}`} />
+      <div className='pointer-events-none relative h-36 overflow-hidden'>
+        <FoodImage src={item.imageUrl} alt={item.name} className='size-full' />
+        <span className='absolute bottom-2.5 left-2.5 rounded-full bg-surface/95 px-2.5 py-1 text-xs font-bold text-ink'>
+          {item.dietary[0] ? DIETARY_LABELS[item.dietary[0]] : 'Chef’s pick'}
+        </span>
       </div>
-      <div className='flex items-baseline justify-between gap-3 p-3.5'>
-        <span className='truncate font-medium'>{item.name}</span>
-        <span className='tabular shrink-0 text-sm text-ink-muted'>{money(item.priceCents)}</span>
+      <div className='pointer-events-none p-3.5'>
+        <h3 className='truncate font-bold'>{item.name}</h3>
+        <p className='truncate text-sm text-ink-muted'>{item.description}</p>
+        <div className='mt-3 flex items-center justify-between'>
+          <PricePill>{money(item.priceCents)}</PricePill>
+          <span className='pointer-events-auto'>
+            <AddButton item={item} />
+          </span>
+        </div>
       </div>
-    </button>
+    </article>
   );
 }

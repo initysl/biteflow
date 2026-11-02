@@ -67,7 +67,7 @@ function TableCard({
     <Card className='flex flex-col p-4'>
       <div className='flex items-start justify-between gap-2'>
         <div>
-          <h3 className='font-display text-xl font-semibold'>{table.label}</h3>
+          <h3 className='font-display text-xl font-bold'>{table.label}</h3>
           <p className='flex items-center gap-1.5 text-sm text-ink-muted'>
             <Users className='size-3.5' /> {table.seats} seats
           </p>
@@ -233,10 +233,10 @@ function PrintSheet({ tables, restaurantName }: { tables: TableWithToken[]; rest
           key={t.id}
           className='flex break-inside-avoid flex-col items-center rounded-2xl border border-black/20 p-6 text-center'
         >
-          <p className='font-display text-2xl font-semibold'>{restaurantName}</p>
+          <p className='font-display text-2xl font-bold'>{restaurantName}</p>
           <p className='mt-1 text-sm'>Scan to order & pay</p>
           <QrImage text={tableUrl(t)} className='my-4 size-48' />
-          <p className='font-display text-3xl font-semibold'>{t.label}</p>
+          <p className='font-display text-3xl font-bold'>{t.label}</p>
         </div>
       ))}
     </div>,
@@ -301,7 +301,7 @@ export function TablesPage() {
         }
       />
 
-      <div className='grid gap-4 px-4 pb-10 sm:grid-cols-2 sm:px-8 lg:grid-cols-3 2xl:grid-cols-4'>
+      <div className='grid gap-4 px-4 pb-10 sm:grid-cols-2 sm:px-6 lg:px-8 @3xl:grid-cols-3 @6xl:grid-cols-4'>
         {isLoading
           ? Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className='h-80' />)
           : tables?.map((t) => (

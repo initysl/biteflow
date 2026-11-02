@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm';
+import { asc, eq, inArray } from 'drizzle-orm';
 import { formatPrice } from '../../shared/money';
 import type { MenuItem, Quote } from '../../shared/schemas';
 import type { QuoteInput } from '../../shared/validation';
@@ -20,6 +20,17 @@ export interface PricedCart {
 }
 
 type PromoRow = typeof promoCodes.$inferSelect;
+
+/** The promo to advertise to guests: active, preferring codes with no minimum spend. */
+export function featuredPromo(db: DB): { code: string; label: string } | null {
+  const row = db
+    .select({ code: promoCodes.code, label: promoCodes.label })
+    .from(promoCodes)
+    .where(eq(promoCodes.active, true))
+    .orderBy(asc(promoCodes.minSubtotalCents))
+    .get();
+  return row ?? null;
+}
 
 export function discountFor(promo: Pick<PromoRow, 'kind' | 'value'>, subtotalCents: number): number {
   const raw = promo.kind === 'percent' ? Math.round((subtotalCents * promo.value) / 100) : promo.value;

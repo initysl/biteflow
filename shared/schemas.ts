@@ -201,6 +201,8 @@ export interface AppConfig {
   demoMode: boolean;
   /** Only present in demo mode, so visitors can try the staff console. */
   demoPin?: string;
+  /** An active promo code to advertise on the menu, if any. */
+  promo: { code: string; label: string } | null;
 }
 
 export interface StaffUser {

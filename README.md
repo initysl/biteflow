@@ -33,6 +33,11 @@ Kitchen staff and floor managers get a synchronized, real-time Kitchen Display S
 
 Light and dark themes, keyboard and screen-reader friendly, and respectful of `prefers-reduced-motion`.
 
+### Design
+
+- **Type:** [Changa](https://fonts.google.com/specimen/Changa) for headings, prices and table numbers; [Ubuntu](https://fonts.google.com/specimen/Ubuntu) for everything else. Both are self-hosted via Fontsource.
+- **Colour:** a signal orange accent (`#D23F06`) with a yellow highlight, white cards on a warm-grey ground, and black price pills. Every token is defined once in `src/index.css`, with a separate dark-mode set, and text pairings are checked against WCAG AA.
+
 ## Quick start
 
 ```bash

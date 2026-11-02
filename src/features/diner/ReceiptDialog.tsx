@@ -34,7 +34,7 @@ export function ReceiptDialog({ order, onOpenChange }: { order: Order | null; on
     >
       <div id='receipt' className='rounded-2xl border border-dashed border-line-strong p-5 text-sm'>
         <div className='text-center'>
-          <p className='font-display text-xl font-semibold'>{config?.restaurantName}</p>
+          <p className='font-display text-xl font-bold'>{config?.restaurantName}</p>
           <p className='text-ink-muted'>
             Order #{shown.number} · Table {shown.tableId}
           </p>

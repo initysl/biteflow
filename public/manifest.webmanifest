@@ -4,7 +4,7 @@
   "description": "QR table ordering and kitchen display",
   "start_url": "/staff",
   "display": "standalone",
-  "background_color": "#faf6ef",
-  "theme_color": "#faf6ef",
-  "icons": [{ "src": "/bitflow.svg", "sizes": "any", "type": "image/svg+xml" }]
+  "background_color": "#f6f5f2",
+  "theme_color": "#f6f5f2",
+  "icons": [{ "src": "/biteflow-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
 }

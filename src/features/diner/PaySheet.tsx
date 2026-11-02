@@ -77,16 +77,19 @@ export function PaySheet({
       }
     >
       <div className='px-5 pt-5 pb-6'>
-        <div className='relative aspect-[1.586] w-full max-w-sm overflow-hidden rounded-2xl bg-gradient-to-br from-[#2b241d] via-[#3b3027] to-[#6d3a22] p-5 text-white shadow-raised'>
-          <div className='absolute -top-16 -right-10 size-48 rounded-full bg-white/5' />
+        <div className='relative aspect-[1.586] w-full max-w-sm overflow-hidden rounded-[24px] bg-[#17171a] p-5 text-white shadow-raised'>
+          <div className='absolute -top-14 -right-12 size-48 rounded-full bg-accent-bright' />
+          <div className='absolute -top-6 -right-2 size-24 rounded-full bg-highlight' />
           <div className='flex h-full flex-col justify-between'>
             <div className='flex items-start justify-between'>
-              <span className='font-display text-lg font-semibold'>{config?.restaurantName}</span>
-              <span className='rounded-md bg-white/15 px-2 py-0.5 text-xs font-medium'>{isStripe ? 'Stripe' : 'Demo'}</span>
+              <span className='relative font-display text-lg font-bold'>{config?.restaurantName}</span>
+              <span className='relative rounded-full bg-[#17171a] px-2.5 py-1 text-xs font-bold'>
+                {isStripe ? 'Stripe' : 'Demo'}
+              </span>
             </div>
             <div>
-              <p className='text-xs tracking-wide text-white/60 uppercase'>Amount due</p>
-              <p className='tabular font-display text-4xl font-semibold'>{money(shown.totalCents)}</p>
+              <p className='text-xs font-semibold tracking-wide text-white/70 uppercase'>Amount due</p>
+              <p className='tabular font-display text-4xl font-bold'>{money(shown.totalCents)}</p>
             </div>
           </div>
         </div>

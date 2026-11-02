@@ -1,28 +1,67 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   BarChart3,
+  Bell,
+  BellOff,
   ChefHat,
+  ChevronsUpDown,
   ExternalLink,
   LayoutGrid,
   LogOut,
+  Monitor,
+  Moon,
   QrCode,
   RotateCcw,
+  Sun,
   UtensilsCrossed,
-  Volume2,
-  VolumeX,
+  type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, Navigate, Outlet, ScrollRestoration, useLocation } from 'react-router';
 import { toast } from 'sonner';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Separator } from '@/components/ui/separator';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+  useSidebar,
+} from '@/components/ui/sidebar';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import type { StaffUser } from '@shared/schemas';
 import { ApiError, api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { useConfig, useMe, useStaffAssistance, useStaffOrders, useStaffTables } from '@/lib/queries';
 import { realtime, useConnectionStatus, useRealtimeSubscription } from '@/lib/realtime';
 import { playChime } from '@/lib/sound';
+import { useTheme, type ThemePref } from '@/lib/theme';
 import { Button } from '@/ui/Button';
 import { Skeleton, StatusDot } from '@/ui/Display';
 import { Dialog } from '@/ui/Sheet';
-import { ThemeToggle } from '@/ui/ThemeToggle';
 
 const SOUND_KEY = 'bf:staff:sound';
 
@@ -44,8 +83,8 @@ function useSoundPref() {
   return [on, setOn] as const;
 }
 
-/** Chime + announcement when a new ticket or help request arrives. */
-function useAlerts(soundOn: boolean) {
+/** Chime + announcement when a new ticket arrives. */
+function useNewOrderAlerts(soundOn: boolean) {
   const soundRef = useRef(soundOn);
   soundRef.current = soundOn;
   const [announcement, setAnnouncement] = useState('');
@@ -53,58 +92,301 @@ function useAlerts(soundOn: boolean) {
   useEffect(
     () =>
       realtime.on((event) => {
-        if (event.type === 'order.upserted' && event.order.status === 'pending' && !event.order.preparingAt) {
-          const age = Date.now() - Date.parse(event.order.paidAt ?? event.order.createdAt);
-          if (age > 10_000) return; // an edit to an old ticket, not a new one
-          if (soundRef.current) playChime();
-          setAnnouncement(`New order ${event.order.number} for table ${event.order.tableId}`);
-          toast(`New order #${event.order.number}`, {
-            description: `Table ${event.order.tableId} · ${event.order.items.length} items`,
-          });
-        }
+        if (event.type !== 'order.upserted' || event.order.status !== 'pending' || event.order.preparingAt) return;
+        const age = Date.now() - Date.parse(event.order.paidAt ?? event.order.createdAt);
+        if (age > 10_000) return; // an edit to an old ticket, not a new one
+        if (soundRef.current) playChime();
+        setAnnouncement(`New order ${event.order.number} for table ${event.order.tableId}`);
+        toast(`New order #${event.order.number}`, {
+          description: `Table ${event.order.tableId} · ${event.order.items.length} items`,
+        });
       }),
     [],
   );
   return announcement;
 }
 
-const NAV = [
-  { to: 'kitchen', label: 'Kitchen', icon: ChefHat },
-  { to: 'floor', label: 'Floor', icon: LayoutGrid },
-  { to: 'menu', label: 'Menu', icon: UtensilsCrossed },
-  { to: 'tables', label: 'Tables & QR', icon: QrCode },
-  { to: 'reports', label: 'Reports', icon: BarChart3 },
-] as const;
+interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  group: 'Service' | 'Back office';
+}
 
-function NavBadge({ count, tone = 'accent' }: { count: number; tone?: 'accent' | 'danger' }) {
-  if (!count) return null;
+const NAV: NavItem[] = [
+  { to: 'kitchen', label: 'Kitchen', icon: ChefHat, group: 'Service' },
+  { to: 'floor', label: 'Floor', icon: LayoutGrid, group: 'Service' },
+  { to: 'menu', label: 'Menu', icon: UtensilsCrossed, group: 'Back office' },
+  { to: 'tables', label: 'Tables & QR', icon: QrCode, group: 'Back office' },
+  { to: 'reports', label: 'Reports', icon: BarChart3, group: 'Back office' },
+];
+
+const menuButton =
+  'h-10 rounded-xl text-[14px] font-semibold text-ink-muted hover:text-ink [&>svg]:size-[18px] ' +
+  'data-[active=true]:bg-accent-soft data-[active=true]:font-bold data-[active=true]:text-accent-ink';
+
+const THEMES: { value: ThemePref; label: string; icon: LucideIcon }[] = [
+  { value: 'system', label: 'System', icon: Monitor },
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'dark', label: 'Dark', icon: Moon },
+];
+
+function initials(name: string) {
+  return name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function AccountMenu({
+  user,
+  restaurant,
+  soundOn,
+  setSoundOn,
+  onSignOut,
+}: {
+  user: StaffUser;
+  restaurant?: string;
+  soundOn: boolean;
+  setSoundOn: (v: boolean) => void;
+  onSignOut: () => void;
+}) {
+  const { isMobile } = useSidebar();
+  const [theme, setTheme] = useTheme();
   return (
-    <span
-      className={cn(
-        'tabular ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold',
-        tone === 'danger' ? 'bg-danger text-on-danger' : 'bg-accent text-on-accent',
-      )}
-    >
-      {count}
-    </span>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <SidebarMenuButton size='lg' className='rounded-xl data-[state=open]:bg-sidebar-accent'>
+          <Avatar className='size-8 rounded-full'>
+            <AvatarFallback className='rounded-full bg-ink text-xs font-bold text-canvas'>{initials(user.name)}</AvatarFallback>
+          </Avatar>
+          <span className='grid flex-1 text-left leading-tight'>
+            <span className='truncate text-sm font-bold text-ink'>{user.name}</span>
+            <span className='truncate text-xs text-ink-muted'>{restaurant}</span>
+          </span>
+          <ChevronsUpDown className='ml-auto size-4' />
+        </SidebarMenuButton>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className='w-60 rounded-2xl p-1.5' side={isMobile ? 'bottom' : 'right'} align='end' sideOffset={8}>
+        <DropdownMenuLabel className='px-2 py-1.5'>
+          <span className='block text-sm font-bold'>{user.name}</span>
+          <span className='block text-xs font-normal text-ink-muted'>{restaurant}</span>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuCheckboxItem className='rounded-lg' checked={soundOn} onCheckedChange={(v) => setSoundOn(!!v)}>
+          Sound alerts
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className='px-2 text-xs font-bold tracking-[0.06em] text-ink-subtle uppercase'>
+          Theme
+        </DropdownMenuLabel>
+        <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as ThemePref)}>
+          {THEMES.map(({ value, label, icon: Icon }) => (
+            <DropdownMenuRadioItem key={value} value={value} className='rounded-lg'>
+              <Icon className='size-4 text-ink-muted' /> {label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className='rounded-lg font-semibold text-danger focus:text-danger' onSelect={onSignOut}>
+          <LogOut className='size-4' /> Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
+}
+
+function AppSidebar({
+  user,
+  counts,
+  soundOn,
+  setSoundOn,
+  onReset,
+  onSignOut,
+}: {
+  user: StaffUser;
+  counts: Record<string, { count: number; tone: 'accent' | 'ink' } | undefined>;
+  soundOn: boolean;
+  setSoundOn: (v: boolean) => void;
+  onReset: () => void;
+  onSignOut: () => void;
+}) {
+  const { data: config } = useConfig();
+  const { pathname } = useLocation();
+  const { setOpenMobile } = useSidebar();
+  const closeOnMobile = () => setOpenMobile(false);
+
+  return (
+    <Sidebar collapsible='icon' className='border-r border-line'>
+      <SidebarHeader className='px-3 pt-4'>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size='lg' asChild className='rounded-xl hover:bg-transparent'>
+              <Link to='/staff/kitchen' onClick={closeOnMobile}>
+                <span className='flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent text-on-accent'>
+                  <UtensilsCrossed className='size-4' />
+                </span>
+                <span className='grid flex-1 leading-tight'>
+                  <span className='truncate font-display text-lg font-bold text-ink'>BiteFlow</span>
+                  <span className='truncate text-xs text-ink-muted'>Staff console</span>
+                </span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+
+      <SidebarContent className='px-1'>
+        {(['Service', 'Back office'] as const).map((group) => (
+          <SidebarGroup key={group}>
+            <SidebarGroupLabel className='text-[11px] font-bold tracking-[0.08em] text-ink-subtle uppercase'>
+              {group}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className='gap-1'>
+                {NAV.filter((n) => n.group === group).map(({ to, label, icon: Icon }) => {
+                  const badge = counts[to];
+                  return (
+                    <SidebarMenuItem key={to}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith(`/staff/${to}`)}
+                        tooltip={label}
+                        className={menuButton}
+                      >
+                        <NavLink to={to} onClick={closeOnMobile}>
+                          <Icon />
+                          <span>{label}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                      {badge && badge.count > 0 && (
+                        <SidebarMenuBadge
+                          className={cn(
+                            'top-2.5 h-5 min-w-5 rounded-full px-1.5 text-[11px] font-bold',
+                            // `!` beats the shadcn rule that recolours badge text on hovered/active rows.
+                            badge.tone === 'accent' ? 'bg-accent !text-on-accent' : 'bg-ink !text-canvas',
+                          )}
+                        >
+                          {badge.count}
+                        </SidebarMenuBadge>
+                      )}
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+
+        <SidebarGroup className='mt-auto'>
+          <SidebarGroupContent>
+            <SidebarMenu className='gap-1'>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip='Guest view' className={menuButton}>
+                  <a href='/' target='_blank' rel='noreferrer'>
+                    <ExternalLink />
+                    <span>Guest view</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {config?.demoMode && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip='Reset demo data' className={menuButton} onClick={onReset}>
+                    <RotateCcw />
+                    <span>Reset demo data</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className='border-t border-line px-3 py-3'>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <AccountMenu
+              user={user}
+              restaurant={config?.restaurantName}
+              soundOn={soundOn}
+              setSoundOn={setSoundOn}
+              onSignOut={onSignOut}
+            />
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  );
+}
+
+function TopBar({ soundOn, setSoundOn }: { soundOn: boolean; setSoundOn: (v: boolean) => void }) {
+  const { pathname } = useLocation();
+  const status = useConnectionStatus();
+  const current = NAV.find((n) => pathname.startsWith(`/staff/${n.to}`));
+  const live = status === 'online';
+  return (
+    <header className='sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b border-line bg-canvas/85 px-4 backdrop-blur-xl sm:px-6'>
+      <SidebarTrigger className='-ml-1 size-9 rounded-full text-ink-muted hover:bg-surface-2 hover:text-ink' />
+      <Separator orientation='vertical' className='mr-1 data-[orientation=vertical]:h-5' />
+      <Breadcrumb>
+        <BreadcrumbList>
+          {current && (
+            <>
+              <BreadcrumbItem className='hidden sm:inline-flex'>{current.group}</BreadcrumbItem>
+              <BreadcrumbSeparator className='hidden sm:block' />
+              <BreadcrumbItem>
+                <BreadcrumbPage className='font-bold text-accent-text'>{current.label}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </>
+          )}
+        </BreadcrumbList>
+      </Breadcrumb>
+      <div className='ml-auto flex items-center gap-1.5'>
+        <span
+          role='status'
+          className={cn(
+            'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold',
+            live ? 'bg-success-soft text-success' : 'bg-warning-soft text-warning',
+          )}
+        >
+          <StatusDot tone={live ? 'success' : 'warning'} pulse={!live} />
+          {live ? 'Live' : status === 'connecting' ? 'Connecting…' : 'Reconnecting…'}
+        </span>
+        <button
+          type='button'
+          onClick={() => setSoundOn(!soundOn)}
+          aria-label={soundOn ? 'Mute alerts' : 'Unmute alerts'}
+          title={soundOn ? 'Mute alerts' : 'Unmute alerts'}
+          className='pressable inline-flex size-9 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink'
+        >
+          {soundOn ? <Bell className='size-[18px]' /> : <BellOff className='size-[18px]' />}
+        </button>
+      </div>
+    </header>
+  );
+}
+
+function readSidebarCookie() {
+  return !document.cookie.split('; ').includes('sidebar_state=false');
 }
 
 export function StaffLayout() {
   const me = useMe();
   const location = useLocation();
   const qc = useQueryClient();
-  const { data: config } = useConfig();
   const [soundOn, setSoundOn] = useSoundPref();
   const [resetOpen, setResetOpen] = useState(false);
-  const status = useConnectionStatus();
   const signedIn = me.isSuccess;
   useRealtimeSubscription(signedIn ? { type: 'subscribe', room: 'staff' } : null);
-  const announcement = useAlerts(soundOn);
+  const announcement = useNewOrderAlerts(soundOn);
 
   const orders = useStaffOrders(signedIn);
   const assistance = useStaffAssistance(signedIn);
   const tables = useStaffTables(signedIn);
+
   // Chime when a help request is added (not when one is resolved).
   const assistCount = assistance.data?.length;
   const prevAssist = useRef(assistCount);
@@ -112,9 +394,6 @@ export function StaffLayout() {
     if (assistCount !== undefined && prevAssist.current !== undefined && assistCount > prevAssist.current && soundOn) playChime();
     prevAssist.current = assistCount;
   }, [assistCount, soundOn]);
-
-  const newCount = orders.data?.filter((o) => o.status === 'pending').length ?? 0;
-  const floorCount = (assistance.data?.length ?? 0) + (tables.data?.filter((t) => t.billRequest).length ?? 0);
 
   const logout = useMutation({
     mutationFn: () => api('/auth/logout', { method: 'POST' }),
@@ -144,178 +423,63 @@ export function StaffLayout() {
     );
   }
 
-  const counts: Record<string, number> = { kitchen: newCount, floor: floorCount };
+  const counts = {
+    kitchen: { count: orders.data?.filter((o) => o.status === 'pending').length ?? 0, tone: 'accent' as const },
+    floor: {
+      count: (assistance.data?.length ?? 0) + (tables.data?.filter((t) => t.billRequest).length ?? 0),
+      tone: 'ink' as const,
+    },
+  };
 
   return (
-    <div className='min-h-dvh bg-canvas md:grid md:grid-cols-[232px_1fr]'>
-      <ScrollRestoration />
-      <p className='sr-only' aria-live='assertive'>
-        {announcement}
-      </p>
+    <TooltipProvider delayDuration={0}>
+      <SidebarProvider defaultOpen={readSidebarCookie()} className='bg-canvas'>
+        <ScrollRestoration />
+        <p className='sr-only' aria-live='assertive'>
+          {announcement}
+        </p>
+        <AppSidebar
+          user={me.data}
+          counts={counts}
+          soundOn={soundOn}
+          setSoundOn={setSoundOn}
+          onReset={() => setResetOpen(true)}
+          onSignOut={() => logout.mutate()}
+        />
+        <SidebarInset className='@container min-w-0 bg-canvas'>
+          <TopBar soundOn={soundOn} setSoundOn={setSoundOn} />
+          <Outlet />
+        </SidebarInset>
 
-      {/* Sidebar (tablet & desktop) */}
-      <aside className='sticky top-0 hidden h-dvh flex-col border-r border-line bg-surface px-3 py-5 md:flex'>
-        <Link to='/' className='flex items-center gap-2.5 px-2.5'>
-          <img src='/bitflow.svg' alt='' className='size-7' />
-          <span className='min-w-0'>
-            <span className='block font-display text-lg leading-tight font-semibold'>BiteFlow</span>
-            <span className='block truncate text-xs text-ink-subtle'>{config?.restaurantName}</span>
-          </span>
-        </Link>
-        <nav className='mt-8 space-y-0.5' aria-label='Staff'>
-          {NAV.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                cn(
-                  'flex h-10 items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors',
-                  isActive ? 'bg-surface-2 text-ink' : 'text-ink-muted hover:bg-surface-2/60 hover:text-ink',
-                )
-              }
-            >
-              <Icon className='size-4.5' />
-              {label}
-              <NavBadge count={counts[to] ?? 0} tone={to === 'floor' ? 'danger' : 'accent'} />
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className='mt-auto space-y-1 border-t border-line pt-4'>
-          <div className='flex items-center gap-2 px-3 py-1.5 text-sm text-ink-muted'>
-            <StatusDot
-              tone={status === 'online' ? 'success' : status === 'connecting' ? 'warning' : 'danger'}
-              pulse={status !== 'online'}
-            />
-            {status === 'online' ? 'Live' : status === 'connecting' ? 'Connecting…' : 'Offline — retrying'}
-          </div>
-          {config?.demoMode && (
-            <button
-              type='button'
-              onClick={() => setResetOpen(true)}
-              className='flex h-9 w-full items-center gap-3 rounded-xl px-3 text-sm text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink'
-            >
-              <RotateCcw className='size-4' /> Reset demo data
-            </button>
-          )}
-          <a
-            href='/'
-            target='_blank'
-            rel='noreferrer'
-            className='flex h-9 items-center gap-3 rounded-xl px-3 text-sm text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink'
-          >
-            <ExternalLink className='size-4' /> Guest view
-          </a>
-          <div className='flex items-center justify-between gap-1 px-1 pt-2'>
-            <span className='truncate px-2 text-sm font-medium'>{me.data.name}</span>
-            <div className='flex'>
-              <button
-                type='button'
-                onClick={() => setSoundOn(!soundOn)}
-                aria-label={soundOn ? 'Mute alerts' : 'Unmute alerts'}
-                title={soundOn ? 'Mute alerts' : 'Unmute alerts'}
-                className='pressable inline-flex size-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-ink'
-              >
-                {soundOn ? <Volume2 className='size-4.5' /> : <VolumeX className='size-4.5' />}
-              </button>
-              <ThemeToggle />
-              <button
-                type='button'
-                onClick={() => logout.mutate()}
-                aria-label='Sign out'
-                title='Sign out'
-                className='pressable inline-flex size-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-ink'
-              >
-                <LogOut className='size-4.5' />
-              </button>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Top bar (phones) */}
-      <header className='sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-surface/90 px-4 backdrop-blur-xl md:hidden'>
-        <span className='flex items-center gap-2'>
-          <img src='/bitflow.svg' alt='' className='size-6' />
-          <span className='font-display font-semibold'>BiteFlow</span>
-          <StatusDot tone={status === 'online' ? 'success' : 'warning'} pulse={status !== 'online'} />
-        </span>
-        <div className='flex items-center'>
-          <button
-            type='button'
-            onClick={() => setSoundOn(!soundOn)}
-            aria-label={soundOn ? 'Mute alerts' : 'Unmute alerts'}
-            className='pressable inline-flex size-9 items-center justify-center rounded-lg text-ink-muted'
-          >
-            {soundOn ? <Volume2 className='size-4.5' /> : <VolumeX className='size-4.5' />}
-          </button>
-          <ThemeToggle />
-          <button
-            type='button'
-            onClick={() => logout.mutate()}
-            aria-label='Sign out'
-            className='pressable inline-flex size-9 items-center justify-center rounded-lg text-ink-muted'
-          >
-            <LogOut className='size-4.5' />
-          </button>
-        </div>
-      </header>
-
-      <div className='min-w-0 pb-24 md:pb-0'>
-        <Outlet />
-      </div>
-
-      {/* Bottom tabs (phones) */}
-      <nav
-        aria-label='Staff'
-        className='fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden'
-      >
-        {NAV.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              cn(
-                'relative flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium',
-                isActive ? 'text-accent' : 'text-ink-subtle',
-              )
-            }
-          >
-            <Icon className='size-5' />
-            {label.split(' ')[0]}
-            {(counts[to] ?? 0) > 0 && <span className='absolute top-2.5 right-[calc(50%-18px)] size-2 rounded-full bg-danger' />}
-          </NavLink>
-        ))}
-      </nav>
-
-      <Dialog
-        open={resetOpen}
-        onOpenChange={setResetOpen}
-        title='Reset demo data?'
-        description='Clears all orders and requests, restores the sample menu and adds a few example tickets.'
-        footer={
-          <>
-            <Button variant='ghost' onClick={() => setResetOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant='danger' loading={reset.isPending} onClick={() => reset.mutate()}>
-              Reset
-            </Button>
-          </>
-        }
-      >
-        <p className='text-sm text-ink-muted'>Tables, QR codes and staff accounts are kept.</p>
-      </Dialog>
-    </div>
+        <Dialog
+          open={resetOpen}
+          onOpenChange={setResetOpen}
+          title='Reset demo data?'
+          description='Clears all orders and requests, restores the sample menu and adds a few example tickets.'
+          footer={
+            <>
+              <Button variant='ghost' onClick={() => setResetOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant='danger' loading={reset.isPending} onClick={() => reset.mutate()}>
+                Reset
+              </Button>
+            </>
+          }
+        >
+          <p className='text-sm text-ink-muted'>Tables, QR codes and staff accounts are kept.</p>
+        </Dialog>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }
 
-/** Shared page header for staff screens. */
+/** Shared page header for staff screens: title, description, optional actions. */
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   return (
-    <div className='flex flex-wrap items-end justify-between gap-4 px-4 pt-6 pb-5 sm:px-8 sm:pt-8'>
-      <div>
-        <h1 className='font-display text-3xl font-semibold tracking-tight'>{title}</h1>
+    <div className='flex flex-wrap items-end justify-between gap-4 px-4 pt-6 pb-5 sm:px-6 lg:px-8'>
+      <div className='min-w-0'>
+        <h1 className='font-display text-3xl font-bold'>{title}</h1>
         {description && <p className='mt-1 text-ink-muted'>{description}</p>}
       </div>
       {actions && <div className='flex flex-wrap gap-2'>{actions}</div>}

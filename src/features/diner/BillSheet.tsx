@@ -66,7 +66,7 @@ export function BillSheet({
       <div className='space-y-5 px-5 pt-4 pb-6'>
         <div className='rounded-2xl bg-surface-2 p-4'>
           <p className='text-sm text-ink-muted'>Outstanding</p>
-          <p className='tabular font-display text-3xl font-semibold'>{money(outstandingCents)}</p>
+          <p className='tabular font-display text-3xl font-bold'>{money(outstandingCents)}</p>
         </div>
 
         <fieldset className='space-y-2'>
@@ -81,7 +81,7 @@ export function BillSheet({
               key={opt.value}
               className={cn(
                 'pressable flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-colors',
-                split === opt.value ? 'border-ink bg-surface-2 ring-1 ring-ink' : 'border-line hover:border-line-strong',
+                split === opt.value ? 'border-accent bg-accent-soft ring-1 ring-accent' : 'border-line hover:border-line-strong',
               )}
             >
               <input
