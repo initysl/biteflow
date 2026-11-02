@@ -67,28 +67,26 @@ const fromItem = (m: MenuItem): FormState => ({
 
 const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
-/** Create (item = null) or edit a menu item. */
-export function MenuItemDialog({
-  open,
-  item,
-  onOpenChange,
-}: {
-  open: boolean;
-  item: MenuItem | null;
-  onOpenChange: (open: boolean) => void;
-}) {
+/**
+ * Create (item = null) or edit a menu item. `formId` lets the caller render
+ * the submit button wherever it likes (dialog footer or panel).
+ */
+function useMenuItemForm(item: MenuItem | null, active: boolean, onDone: () => void) {
   const qc = useQueryClient();
   const [form, setForm] = useState<FormState>(blank);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }));
 
+  // Reset only when a different item is opened — not when a background refetch
+  // hands us a fresh copy of the same item mid-edit.
+  const itemId = item?.id;
   useEffect(() => {
-    if (open) {
+    if (active) {
       setForm(item ? fromItem(item) : blank);
       setErrors({});
     }
-  }, [open, item]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, itemId]);
 
   const save = useMutation({
     mutationFn: (body: MenuItemInput) =>
@@ -98,7 +96,7 @@ export function MenuItemDialog({
     onSuccess: (saved) => {
       qc.invalidateQueries({ queryKey: queryKeys.menu });
       toast.success(item ? `Saved ${saved.name}` : `Added ${saved.name} to the menu`);
-      onOpenChange(false);
+      onDone();
     },
     onError: (err) => toast.error(errorMessage(err)),
   });
@@ -108,8 +106,7 @@ export function MenuItemDialog({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.menu });
       toast.success(`Removed ${item!.name}`);
-      setConfirmDelete(false);
-      onOpenChange(false);
+      onDone();
     },
     onError: (err) => toast.error(errorMessage(err)),
   });
@@ -142,6 +139,171 @@ export function MenuItemDialog({
     save.mutate(body);
   };
 
+  return { form, set, errors, submit, save, remove };
+}
+
+function Fields({ formId, state, compact }: { formId: string; state: ReturnType<typeof useMenuItemForm>; compact?: boolean }) {
+  const { form, set, errors, submit } = state;
+  return (
+    <form id={formId} onSubmit={submit} className='space-y-5' noValidate>
+      <div className='grid grid-cols-[1fr_120px] gap-3'>
+        <Field label='Name' error={errors.name}>
+          {(p) => <Input {...p} value={form.name} onChange={(e) => set('name', e.target.value)} maxLength={80} />}
+        </Field>
+        <Field label='Price' error={errors.price}>
+          {(p) => (
+            <Input
+              {...p}
+              inputMode='decimal'
+              placeholder='0.00'
+              value={form.price}
+              onChange={(e) => set('price', e.target.value)}
+              className='tabular'
+            />
+          )}
+        </Field>
+      </div>
+
+      <Field label='Description' error={errors.description}>
+        {(p) => (
+          <Textarea
+            {...p}
+            rows={compact ? 2 : 3}
+            maxLength={400}
+            value={form.description}
+            onChange={(e) => set('description', e.target.value)}
+          />
+        )}
+      </Field>
+
+      <div className='grid grid-cols-2 gap-3'>
+        <Field label='Category'>
+          {(p) => (
+            <Select {...p} value={form.category} onChange={(e) => set('category', e.target.value as FormState['category'])}>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {CATEGORY_LABELS[c]}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+        <Field label='Kitchen station'>
+          {(p) => (
+            <Select {...p} value={form.station} onChange={(e) => set('station', e.target.value as FormState['station'])}>
+              {STATIONS.map((s) => (
+                <option key={s} value={s}>
+                  {STATION_LABELS[s]}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+      </div>
+
+      <div className='grid grid-cols-[1fr_72px] items-start gap-3'>
+        <Field label='Photo URL' error={errors.imageUrl}>
+          {(p) => (
+            <Input
+              {...p}
+              type='url'
+              placeholder='https://…'
+              value={form.imageUrl}
+              onChange={(e) => set('imageUrl', e.target.value)}
+            />
+          )}
+        </Field>
+        <FoodImage src={form.imageUrl || null} alt={form.name || 'Preview'} className='mt-7 aspect-square w-18 rounded-2xl' />
+      </div>
+
+      <fieldset>
+        <legend className='mb-2 text-sm font-bold'>Dietary</legend>
+        <div className='flex flex-wrap gap-2'>
+          {DIETARY.map((d) => (
+            <Chip key={d} selected={form.dietary.includes(d)} onClick={() => set('dietary', toggle(form.dietary, d))}>
+              {DIETARY_LABELS[d]}
+            </Chip>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset className='space-y-3'>
+        <legend className='mb-2 text-sm font-bold'>Allergens</legend>
+        <Switch
+          checked={form.allergensKnown}
+          onCheckedChange={(v) => set('allergensKnown', v)}
+          label='Allergen information provided'
+          description={
+            form.allergensKnown ? 'Select everything this dish contains.' : 'Guests will be asked to check with staff.'
+          }
+        />
+        {form.allergensKnown && (
+          <div className='flex flex-wrap gap-2'>
+            {ALLERGENS.map((a) => (
+              <Chip key={a} selected={form.allergens.includes(a)} onClick={() => set('allergens', toggle(form.allergens, a))}>
+                {ALLERGEN_LABELS[a]}
+              </Chip>
+            ))}
+          </div>
+        )}
+      </fieldset>
+
+      <div className='space-y-2'>
+        <Switch
+          checked={form.available}
+          onCheckedChange={(v) => set('available', v)}
+          label='Available'
+          description='Turn off when it sells out'
+        />
+        <Switch
+          checked={form.featured}
+          onCheckedChange={(v) => set('featured', v)}
+          label='Chef’s pick'
+          description='Highlight at the top of the menu'
+        />
+      </div>
+    </form>
+  );
+}
+
+function DeleteConfirm({
+  item,
+  open,
+  onOpenChange,
+  state,
+}: {
+  item: MenuItem | null;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  state: ReturnType<typeof useMenuItemForm>;
+}) {
+  return (
+    <ConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`Delete ${item?.name ?? 'item'}?`}
+      confirmLabel='Delete'
+      tone='danger'
+      loading={state.remove.isPending}
+      onConfirm={() => state.remove.mutate(undefined, { onSuccess: () => onOpenChange(false) })}
+    >
+      It will disappear from the menu immediately. Past orders keep their record of it.
+    </ConfirmDialog>
+  );
+}
+
+/** Modal editor for smaller screens and for creating items. */
+export function MenuItemDialog({
+  open,
+  item,
+  onOpenChange,
+}: {
+  open: boolean;
+  item: MenuItem | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const state = useMenuItemForm(item, open, () => onOpenChange(false));
+  const [confirmDelete, setConfirmDelete] = useState(false);
   return (
     <>
       <Dialog
@@ -159,147 +321,42 @@ export function MenuItemDialog({
             <Button variant='ghost' onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type='submit' form='menu-item-form' loading={save.isPending}>
+            <Button type='submit' form='menu-item-dialog-form' loading={state.save.isPending}>
               {item ? 'Save changes' : 'Add item'}
             </Button>
           </>
         }
       >
-        <form id='menu-item-form' onSubmit={submit} className='space-y-5' noValidate>
-          <div className='grid gap-4 sm:grid-cols-[1fr_140px]'>
-            <Field label='Name' error={errors.name}>
-              {(p) => <Input {...p} value={form.name} onChange={(e) => set('name', e.target.value)} maxLength={80} />}
-            </Field>
-            <Field label='Price' error={errors.price}>
-              {(p) => (
-                <Input
-                  {...p}
-                  inputMode='decimal'
-                  placeholder='0.00'
-                  value={form.price}
-                  onChange={(e) => set('price', e.target.value)}
-                  className='tabular'
-                />
-              )}
-            </Field>
-          </div>
-
-          <Field label='Description' error={errors.description}>
-            {(p) => (
-              <Textarea
-                {...p}
-                rows={3}
-                maxLength={400}
-                value={form.description}
-                onChange={(e) => set('description', e.target.value)}
-              />
-            )}
-          </Field>
-
-          <div className='grid gap-4 sm:grid-cols-2'>
-            <Field label='Category'>
-              {(p) => (
-                <Select {...p} value={form.category} onChange={(e) => set('category', e.target.value as FormState['category'])}>
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {CATEGORY_LABELS[c]}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </Field>
-            <Field label='Kitchen station' hint='Where the ticket line is routed on the KDS'>
-              {(p) => (
-                <Select {...p} value={form.station} onChange={(e) => set('station', e.target.value as FormState['station'])}>
-                  {STATIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {STATION_LABELS[s]}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </Field>
-          </div>
-
-          <div className='grid gap-4 sm:grid-cols-[1fr_96px] sm:items-start'>
-            <Field label='Photo URL' hint='A landscape photo works best' error={errors.imageUrl}>
-              {(p) => (
-                <Input
-                  {...p}
-                  type='url'
-                  placeholder='https://…'
-                  value={form.imageUrl}
-                  onChange={(e) => set('imageUrl', e.target.value)}
-                />
-              )}
-            </Field>
-            <FoodImage
-              src={form.imageUrl || null}
-              alt={form.name || 'Preview'}
-              className='hidden aspect-square w-24 rounded-xl sm:mt-7 sm:block'
-            />
-          </div>
-
-          <fieldset>
-            <legend className='mb-2 text-sm font-medium'>Dietary</legend>
-            <div className='flex flex-wrap gap-2'>
-              {DIETARY.map((d) => (
-                <Chip key={d} selected={form.dietary.includes(d)} onClick={() => set('dietary', toggle(form.dietary, d))}>
-                  {DIETARY_LABELS[d]}
-                </Chip>
-              ))}
-            </div>
-          </fieldset>
-
-          <fieldset className='rounded-2xl border border-line p-4'>
-            <legend className='px-1 text-sm font-medium'>Allergens</legend>
-            <Switch
-              checked={form.allergensKnown}
-              onCheckedChange={(v) => set('allergensKnown', v)}
-              label='Allergen information provided'
-              description={
-                form.allergensKnown ? 'Select everything this dish contains.' : 'Guests will be asked to check with staff.'
-              }
-            />
-            {form.allergensKnown && (
-              <div className='mt-4 flex flex-wrap gap-2'>
-                {ALLERGENS.map((a) => (
-                  <Chip key={a} selected={form.allergens.includes(a)} onClick={() => set('allergens', toggle(form.allergens, a))}>
-                    {ALLERGEN_LABELS[a]}
-                  </Chip>
-                ))}
-              </div>
-            )}
-          </fieldset>
-
-          <div className='space-y-4'>
-            <Switch
-              checked={form.available}
-              onCheckedChange={(v) => set('available', v)}
-              label='Available'
-              description='Turn off when an item sells out'
-            />
-            <Switch
-              checked={form.featured}
-              onCheckedChange={(v) => set('featured', v)}
-              label='Chef’s pick'
-              description='Highlight at the top of the menu'
-            />
-          </div>
-        </form>
+        <Fields formId='menu-item-dialog-form' state={state} />
       </Dialog>
-
-      <ConfirmDialog
-        open={confirmDelete}
-        onOpenChange={setConfirmDelete}
-        title={`Delete ${item?.name ?? 'item'}?`}
-        confirmLabel='Delete'
-        tone='danger'
-        loading={remove.isPending}
-        onConfirm={() => remove.mutate()}
-      >
-        It will disappear from the menu immediately. Past orders keep their record of it.
-      </ConfirmDialog>
+      <DeleteConfirm item={item} open={confirmDelete} onOpenChange={setConfirmDelete} state={state} />
     </>
+  );
+}
+
+/** Inline editor shown beside the grid on wide screens. */
+export function MenuItemPanel({ item, onClose }: { item: MenuItem; onClose: () => void }) {
+  const state = useMenuItemForm(item, true, onClose);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  return (
+    <div className='flex flex-col gap-5'>
+      <div className='flex items-center gap-3'>
+        <FoodImage src={item.imageUrl} alt={item.name} className='size-16 shrink-0 rounded-2xl' />
+        <div className='min-w-0'>
+          <p className='text-xs font-bold text-ink-muted'>Editing</p>
+          <h2 className='truncate font-display text-xl font-bold'>{item.name}</h2>
+        </div>
+      </div>
+      <Fields formId='menu-item-panel-form' state={state} compact />
+      <div className='grid grid-cols-2 gap-2.5'>
+        <Button variant='secondary' className='text-danger' onClick={() => setConfirmDelete(true)}>
+          Delete
+        </Button>
+        <Button type='submit' form='menu-item-panel-form' variant='dark' loading={state.save.isPending}>
+          Save changes
+        </Button>
+      </div>
+      <DeleteConfirm item={item} open={confirmDelete} onOpenChange={setConfirmDelete} state={state} />
+    </div>
   );
 }

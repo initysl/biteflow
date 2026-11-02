@@ -14,7 +14,7 @@ import { HttpError, asyncHandler, badRequest, conflict, parse } from '../http';
 import { listActiveAssistance, requestAssistance } from '../services/assistance';
 import { listMenu } from '../services/menu';
 import { cancelUnpaidCheckout, getOrder, listTableOrders, markOrderPaid, placeOrder, requestBill } from '../services/orders';
-import { priceCart } from '../services/pricing';
+import { featuredPromo, priceCart } from '../services/pricing';
 import { getTable, listTables, publicTable, verifyTableToken } from '../services/tables';
 
 /** Routes diners use from the table. Writes require the table's QR token. */
@@ -39,6 +39,7 @@ export function publicRoutes(ctx: AppContext): Router {
       paymentProvider: payments.name,
       demoMode: config.demoMode,
       demoPin: config.demoMode ? config.staffDemoPin : undefined,
+      promo: featuredPromo(db),
     };
     res.json(body);
   });

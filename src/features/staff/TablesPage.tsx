@@ -67,7 +67,7 @@ function TableCard({
     <Card className='flex flex-col p-4'>
       <div className='flex items-start justify-between gap-2'>
         <div>
-          <h3 className='font-display text-xl font-semibold'>{table.label}</h3>
+          <h3 className='font-display text-xl font-bold'>{table.label}</h3>
           <p className='flex items-center gap-1.5 text-sm text-ink-muted'>
             <Users className='size-3.5' /> {table.seats} seats
           </p>
@@ -233,10 +233,10 @@ function PrintSheet({ tables, restaurantName }: { tables: TableWithToken[]; rest
           key={t.id}
           className='flex break-inside-avoid flex-col items-center rounded-2xl border border-black/20 p-6 text-center'
         >
-          <p className='font-display text-2xl font-semibold'>{restaurantName}</p>
+          <p className='font-display text-2xl font-bold'>{restaurantName}</p>
           <p className='mt-1 text-sm'>Scan to order & pay</p>
           <QrImage text={tableUrl(t)} className='my-4 size-48' />
-          <p className='font-display text-3xl font-semibold'>{t.label}</p>
+          <p className='font-display text-3xl font-bold'>{t.label}</p>
         </div>
       ))}
     </div>,
@@ -287,6 +287,7 @@ export function TablesPage() {
   return (
     <div>
       <PageHeader
+        section='Back office'
         title='Tables & QR codes'
         description='Each table has its own code. Print them as table tents or download for your designer.'
         actions={

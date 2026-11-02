@@ -9,7 +9,7 @@ function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: Re
   return (
     <Card className='p-5'>
       <p className='text-sm text-ink-muted'>{label}</p>
-      <p className='tabular mt-2 font-display text-3xl font-semibold tracking-tight'>{value}</p>
+      <p className='tabular mt-2 font-display text-3xl font-bold tracking-tight'>{value}</p>
       {sub && <p className='mt-1 text-sm text-ink-subtle'>{sub}</p>}
     </Card>
   );
@@ -42,7 +42,11 @@ export function ReportsPage() {
 
   return (
     <div>
-      <PageHeader title='Today' description='Live numbers for today’s service. Revenue counts paid orders only.' />
+      <PageHeader
+        section='Back office'
+        title='Reports'
+        description='Live numbers for today’s service. Revenue counts paid orders only.'
+      />
       <div className='space-y-6 px-4 pb-10 sm:px-8'>
         {isLoading || !data ? (
           <div className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
@@ -76,7 +80,7 @@ export function ReportsPage() {
             ) : (
               <div className='grid gap-4 xl:grid-cols-2'>
                 <Card className='p-5'>
-                  <h2 className='font-display text-lg font-semibold'>Orders by hour</h2>
+                  <h2 className='font-display text-lg font-bold'>Orders by hour</h2>
                   <div className='mt-4 h-64' aria-hidden>
                     <ResponsiveContainer>
                       <BarChart data={data.ordersByHour} margin={{ top: 4, right: 4, bottom: 0, left: -24 }} barCategoryGap={2}>
@@ -118,7 +122,7 @@ export function ReportsPage() {
                 </Card>
 
                 <Card className='p-5'>
-                  <h2 className='font-display text-lg font-semibold'>Best sellers</h2>
+                  <h2 className='font-display text-lg font-bold'>Best sellers</h2>
                   <ol className='mt-4 space-y-3'>
                     {data.topItems.map((item) => {
                       const max = data.topItems[0]?.quantity || 1;

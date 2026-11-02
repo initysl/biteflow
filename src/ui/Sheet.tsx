@@ -33,7 +33,7 @@ function Header({ title, description, hideTitle }: Pick<PanelProps, 'title' | 'd
   return (
     <div className={cn('flex items-start justify-between gap-4 px-5 pt-5', hideTitle && 'sr-only')}>
       <div className='min-w-0'>
-        <RadixDialog.Title className='font-display text-2xl font-semibold tracking-tight'>{title}</RadixDialog.Title>
+        <RadixDialog.Title className='font-display text-2xl font-bold'>{title}</RadixDialog.Title>
         {description ? (
           <RadixDialog.Description className='mt-1 text-sm text-ink-muted'>{description}</RadixDialog.Description>
         ) : (
@@ -54,8 +54,8 @@ export function Sheet({ open, onOpenChange, title, description, children, footer
         <RadixDialog.Content
           className={cn(
             'sheet-auto fixed z-50 flex flex-col bg-surface text-ink shadow-float outline-none',
-            'inset-x-0 bottom-0 max-h-[92dvh] rounded-t-3xl',
-            'md:inset-y-0 md:right-0 md:left-auto md:max-h-none md:w-[460px] md:rounded-none md:rounded-l-3xl',
+            'inset-x-0 bottom-0 max-h-[92dvh] rounded-t-[28px]',
+            'md:inset-y-3 md:right-3 md:left-auto md:max-h-none md:w-[460px] md:rounded-[28px]',
             className,
           )}
         >
@@ -83,7 +83,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
         <RadixDialog.Content
           className={cn(
             'dialog fixed top-1/2 left-1/2 z-50 flex max-h-[90dvh] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col',
-            'rounded-3xl bg-surface text-ink shadow-float outline-none',
+            'rounded-[28px] bg-surface text-ink shadow-float outline-none',
             className,
           )}
         >

@@ -99,7 +99,7 @@ export function CartSheet({
                   <dd className='tabular'>−{money(q.discountCents)}</dd>
                 </div>
               )}
-              <div className='flex justify-between pt-1 text-lg font-semibold'>
+              <div className='flex justify-between pt-1 font-display text-xl font-bold'>
                 <dt>Total</dt>
                 <dd className='tabular'>{q ? money(total) : '—'}</dd>
               </div>
@@ -228,7 +228,7 @@ export function CartSheet({
                   key={value}
                   className={cn(
                     'pressable relative flex cursor-pointer flex-col gap-2 rounded-2xl border p-3.5 transition-colors',
-                    method === value ? 'border-ink bg-surface-2 ring-1 ring-ink' : 'border-line hover:border-line-strong',
+                    method === value ? 'border-accent bg-accent-soft ring-1 ring-accent' : 'border-line hover:border-line-strong',
                   )}
                 >
                   <input

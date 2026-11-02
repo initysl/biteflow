@@ -23,23 +23,23 @@ export function CartBar() {
   return (
     <>
       {canOrder && count > 0 && (
-        <div className='fixed inset-x-0 bottom-0 z-30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] animate-arrive'>
+        <div className='animate-arrive fixed inset-x-0 bottom-0 z-30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]'>
           <button
             type='button'
             onClick={() => setCartOpen(true)}
-            className='pressable mx-auto flex h-15 w-full max-w-md items-center gap-3 rounded-2xl bg-ink pr-5 pl-3 text-canvas shadow-float'
+            className='pressable mx-auto flex h-16 w-full max-w-md items-center gap-3 rounded-full bg-accent pr-6 pl-2 text-on-accent shadow-glow'
           >
-            <span className='relative flex size-10 items-center justify-center rounded-xl bg-canvas/10'>
+            <span className='flex size-12 items-center justify-center rounded-full bg-on-accent/15'>
               <ShoppingBag className='size-5' />
-              <span
-                key={count}
-                className='tabular animate-pop absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-accent text-[11px] font-semibold text-on-accent'
-              >
-                {count}
-              </span>
             </span>
-            <span className='flex-1 text-left font-medium'>View order</span>
-            <span className='tabular font-medium'>{money(subtotal)}</span>
+            <span className='flex-1 text-left text-base font-bold'>View your order</span>
+            <span
+              key={count}
+              className='tabular animate-pop rounded-full bg-on-accent px-2.5 py-0.5 text-xs font-extrabold text-accent'
+            >
+              {count}
+            </span>
+            <span className='tabular font-display text-lg font-bold'>{money(subtotal)}</span>
           </button>
         </div>
       )}

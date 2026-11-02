@@ -1,7 +1,7 @@
-import { AlertTriangle, Info } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { ALLERGEN_LABELS, DIETARY_LABELS, type MenuItem } from '@shared/schemas';
+import { ALLERGEN_LABELS, CATEGORY_LABELS, DIETARY_LABELS, type MenuItem } from '@shared/schemas';
 import { useMoney } from '@/lib/queries';
 import { Button } from '@/ui/Button';
 import { Badge, FoodImage, QuantityStepper } from '@/ui/Display';
@@ -13,32 +13,30 @@ import { useDiner } from './DinerLayout';
 function Allergens({ allergens }: { allergens: MenuItem['allergens'] }) {
   if (allergens === null) {
     return (
-      <div className='flex gap-3 rounded-2xl bg-warning-soft p-4 text-sm text-warning'>
+      <div className='flex gap-3 rounded-3xl bg-warning-soft p-4 text-sm font-medium text-warning'>
         <AlertTriangle className='mt-0.5 size-4 shrink-0' />
         <p>Allergen information isn’t available for this dish. Please ask a member of staff before ordering.</p>
       </div>
     );
   }
   return (
-    <div className='rounded-2xl border border-line p-4'>
-      <h3 className='text-sm font-medium'>Allergens</h3>
+    <div className='rounded-3xl bg-surface-2 p-4'>
+      <div className='flex items-center justify-between gap-3'>
+        <h3 className='font-bold'>Allergens</h3>
+        <span className='text-xs font-semibold text-ink-muted'>Tell staff about allergies</span>
+      </div>
       {allergens.length === 0 ? (
-        <p className='mt-1 text-sm text-ink-muted'>No major allergens declared.</p>
+        <p className='mt-2 text-sm text-ink-muted'>No major allergens declared.</p>
       ) : (
-        <p className='mt-1 text-sm text-ink-muted'>
-          Contains{' '}
-          {allergens.map((a, i) => (
-            <span key={a}>
-              <strong className='font-medium text-ink'>{ALLERGEN_LABELS[a]}</strong>
-              {i < allergens.length - 2 ? ', ' : i === allergens.length - 2 ? ' and ' : '.'}
-            </span>
+        <ul className='mt-3 flex flex-wrap gap-1.5' aria-label='Contains'>
+          {allergens.map((a) => (
+            <li key={a} className='rounded-full bg-accent-soft px-3 py-1.5 text-xs font-bold text-accent-ink'>
+              {ALLERGEN_LABELS[a]}
+            </li>
           ))}
-        </p>
+        </ul>
       )}
-      <p className='mt-2 flex items-start gap-1.5 text-xs text-ink-subtle'>
-        <Info className='mt-px size-3.5 shrink-0' />
-        Dishes are prepared in a kitchen that handles all major allergens.
-      </p>
+      <p className='mt-3 text-xs text-ink-subtle'>Prepared in a kitchen that handles all major allergens.</p>
     </div>
   );
 }
@@ -77,14 +75,18 @@ export function ItemSheet({ item, onOpenChange }: { item: MenuItem | null; onOpe
       footer={
         canOrder ? (
           shown.available ? (
-            <div className='flex items-center gap-3'>
-              <QuantityStepper value={quantity} onChange={setQuantity} min={1} label={shown.name} />
-              <Button size='lg' className='flex-1' onClick={submit}>
+            <div className='flex h-16 items-center gap-2 rounded-full bg-accent p-1.5 pl-2 shadow-glow'>
+              <button
+                type='button'
+                onClick={submit}
+                className='pressable h-full flex-1 rounded-full px-4 text-left text-base font-bold text-on-accent'
+              >
                 Add to order · <span className='tabular'>{money(shown.priceCents * quantity)}</span>
-              </Button>
+              </button>
+              <QuantityStepper value={quantity} onChange={setQuantity} min={1} label={shown.name} tone='onAccent' />
             </div>
           ) : (
-            <Button size='lg' className='w-full' disabled>
+            <Button size='lg' variant='dark' className='w-full' disabled>
               Sold out today
             </Button>
           )
@@ -93,15 +95,25 @@ export function ItemSheet({ item, onOpenChange }: { item: MenuItem | null; onOpe
         )
       }
     >
-      <FoodImage src={shown.imageUrl} alt={shown.name} className='aspect-[4/3] w-full md:aspect-[16/11]' />
+      <div className='px-4 pt-4'>
+        <div className='relative overflow-hidden rounded-[24px]'>
+          <FoodImage src={shown.imageUrl} alt={shown.name} className='aspect-[4/3] w-full md:aspect-[16/12]' />
+          <span className='tabular absolute bottom-3 left-3 rounded-full bg-accent px-4 py-2 font-display text-xl font-bold text-on-accent'>
+            {money(shown.priceCents)}
+          </span>
+          {shown.featured && (
+            <span className='absolute top-3 left-3 rounded-full bg-highlight px-3 py-1.5 text-xs font-bold text-on-highlight'>
+              Chef’s pick
+            </span>
+          )}
+        </div>
+      </div>
       <div className='space-y-5 px-5 pt-5 pb-6'>
         <div>
-          <div className='flex items-start justify-between gap-4'>
-            <h2 className='font-display text-3xl leading-tight font-semibold tracking-tight'>{shown.name}</h2>
-            <span className='tabular pt-1.5 text-lg font-medium'>{money(shown.priceCents)}</span>
-          </div>
+          <p className='text-sm font-bold text-accent-text'>{CATEGORY_LABELS[shown.category]}</p>
+          <h2 className='mt-1 font-display text-3xl leading-tight font-bold'>{shown.name}</h2>
           {shown.dietary.length > 0 && (
-            <div className='mt-2.5 flex flex-wrap gap-1.5'>
+            <div className='mt-3 flex flex-wrap gap-1.5'>
               {shown.dietary.map((d) => (
                 <Badge key={d} tone={d === 'spicy' ? 'danger' : 'success'}>
                   {DIETARY_LABELS[d]}
@@ -115,9 +127,9 @@ export function ItemSheet({ item, onOpenChange }: { item: MenuItem | null; onOpe
         <Allergens allergens={shown.allergens} />
 
         {canOrder && shown.available && (
-          <div className='space-y-1.5'>
-            <label htmlFor='item-note' className='text-sm font-medium'>
-              Special requests <span className='font-normal text-ink-subtle'>(optional)</span>
+          <div className='space-y-2'>
+            <label htmlFor='item-note' className='font-bold'>
+              Special requests <span className='font-medium text-ink-subtle'>(optional)</span>
             </label>
             <Textarea
               id='item-note'

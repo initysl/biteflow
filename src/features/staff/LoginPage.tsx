@@ -60,8 +60,8 @@ export function LoginPage() {
           <ArrowLeft className='size-4' /> Back
         </Link>
         <div className='mt-6 text-center'>
-          <img src='/bitflow.svg' alt='' className='mx-auto size-12' />
-          <h1 className='mt-4 font-display text-3xl font-semibold'>Staff sign in</h1>
+          <img src='/biteflow-mark.svg' alt='' className='mx-auto size-14' />
+          <h1 className='mt-4 font-display text-3xl font-bold'>Staff sign in</h1>
           <p className='mt-1 text-ink-muted'>Enter your {PIN_LENGTH}-digit PIN</p>
         </div>
 

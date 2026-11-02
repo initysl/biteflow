@@ -47,8 +47,8 @@ export function LandingPage() {
     <div className='min-h-dvh bg-canvas'>
       <header className='mx-auto flex h-18 max-w-6xl items-center justify-between px-4 sm:px-6'>
         <span className='flex items-center gap-2.5'>
-          <img src='/bitflow.svg' alt='' className='size-8' />
-          <span className='font-display text-xl font-semibold'>BiteFlow</span>
+          <img src='/biteflow-mark.svg' alt='' className='size-10' />
+          <span className='font-display text-2xl font-bold'>BiteFlow</span>
         </span>
         <div className='flex items-center gap-1'>
           <ThemeToggle />
@@ -65,10 +65,10 @@ export function LandingPage() {
               <MonitorSmartphone className='size-4 text-accent' />
               QR ordering for independent restaurants
             </p>
-            <h1 className='mt-6 font-display text-5xl leading-[1.02] font-semibold tracking-tight sm:text-6xl lg:text-7xl'>
+            <h1 className='mt-6 font-display text-5xl leading-[0.98] font-extrabold sm:text-6xl lg:text-7xl'>
               Table service,
               <br />
-              <span className='text-accent italic'>without the wait.</span>
+              <span className='text-accent-text'>without the wait.</span>
             </h1>
             <p className='mt-6 max-w-lg text-lg text-ink-muted'>
               Guests scan, order and pay from their table. Your kitchen sees it the same second. Your floor team spends time on
@@ -125,7 +125,7 @@ export function LandingPage() {
                 <span className='flex size-11 items-center justify-center rounded-xl bg-accent-soft text-accent-ink'>
                   <Icon className='size-5' />
                 </span>
-                <h2 className='mt-4 font-display text-xl font-semibold'>{title}</h2>
+                <h2 className='mt-4 font-display text-xl font-bold'>{title}</h2>
                 <p className='mt-2 text-ink-muted'>{body}</p>
               </div>
             ))}

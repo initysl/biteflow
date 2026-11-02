@@ -2,7 +2,7 @@ import { Minus, Plus, Trash2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
-type Tone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info';
+type Tone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info' | 'highlight';
 
 const tones: Record<Tone, string> = {
   neutral: 'bg-surface-2 text-ink-muted',
@@ -11,13 +11,14 @@ const tones: Record<Tone, string> = {
   warning: 'bg-warning-soft text-warning',
   danger: 'bg-danger-soft text-danger',
   info: 'bg-info-soft text-info',
+  highlight: 'bg-highlight text-on-highlight',
 };
 
 export function Badge({ tone = 'neutral', children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap',
+        'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs leading-none font-bold whitespace-nowrap',
         tones[tone],
         className,
       )}
@@ -27,12 +28,26 @@ export function Badge({ tone = 'neutral', children, className }: { tone?: Tone; 
   );
 }
 
+/** The black price tag used across menu cards. */
+export function PricePill({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <span
+      className={cn(
+        'tabular inline-flex items-center rounded-full bg-ink px-3 py-1.5 text-sm leading-none font-bold text-canvas',
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('rounded-2xl border border-line bg-surface shadow-card', className)}>{children}</div>;
+  return <div className={cn('rounded-3xl border border-line bg-surface shadow-card', className)}>{children}</div>;
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden className={cn('animate-pulse rounded-xl bg-surface-3/70', className)} />;
+  return <div aria-hidden className={cn('animate-pulse rounded-2xl bg-surface-3/70', className)} />;
 }
 
 export function EmptyState({
@@ -51,9 +66,9 @@ export function EmptyState({
   return (
     <div className={cn('flex flex-col items-center px-6 py-14 text-center', className)}>
       {icon ? (
-        <div className='mb-4 flex size-14 items-center justify-center rounded-2xl bg-surface-2 text-ink-subtle'>{icon}</div>
+        <div className='mb-4 flex size-14 items-center justify-center rounded-2xl bg-accent-soft text-accent-ink'>{icon}</div>
       ) : null}
-      <h3 className='font-display text-xl font-semibold'>{title}</h3>
+      <h3 className='font-display text-xl font-bold'>{title}</h3>
       {children ? <p className='mt-1.5 max-w-sm text-[15px] text-ink-muted'>{children}</p> : null}
       {action ? <div className='mt-5'>{action}</div> : null}
     </div>
@@ -67,6 +82,7 @@ export function QuantityStepper({
   max = 50,
   size = 'md',
   label,
+  tone = 'default',
 }: {
   value: number;
   onChange: (v: number) => void;
@@ -74,17 +90,25 @@ export function QuantityStepper({
   max?: number;
   size?: 'sm' | 'md';
   label: string;
+  /** `onAccent` sits inside an orange bar. */
+  tone?: 'default' | 'onAccent';
 }) {
+  const onAccent = tone === 'onAccent';
   const btn = cn(
-    'pressable inline-flex items-center justify-center rounded-full text-ink transition-colors hover:bg-surface-3 disabled:opacity-40',
+    'pressable inline-flex items-center justify-center rounded-full transition-colors disabled:opacity-40',
     size === 'sm' ? 'size-8' : 'size-10',
+    onAccent ? 'bg-on-accent/15 text-on-accent hover:bg-on-accent/25' : 'text-ink hover:bg-surface-3',
   );
+  const plus = cn(btn, onAccent && 'bg-on-accent text-accent hover:bg-on-accent/90');
   const icon = size === 'sm' ? 'size-3.5' : 'size-4';
   return (
     <div
       role='group'
       aria-label={label}
-      className='inline-flex items-center rounded-full border border-line-strong bg-surface p-0.5'
+      className={cn(
+        'inline-flex items-center gap-0.5 rounded-full p-1',
+        onAccent ? 'bg-black/15' : 'border border-line-strong bg-surface',
+      )}
     >
       <button
         type='button'
@@ -93,19 +117,22 @@ export function QuantityStepper({
         disabled={value <= min}
         aria-label={value === 1 && min === 0 ? `Remove ${label}` : `Decrease ${label}`}
       >
-        {value === 1 && min === 0 ? <Trash2 className={icon} /> : <Minus className={icon} />}
+        {value === 1 && min === 0 ? <Trash2 className={icon} /> : <Minus className={icon} strokeWidth={2.6} />}
       </button>
-      <span className={cn('tabular text-center font-semibold', size === 'sm' ? 'w-6 text-sm' : 'w-8')} aria-live='polite'>
+      <span
+        className={cn('tabular text-center font-bold', size === 'sm' ? 'w-6 text-sm' : 'w-7', onAccent && 'text-on-accent')}
+        aria-live='polite'
+      >
         {value}
       </span>
       <button
         type='button'
-        className={btn}
+        className={plus}
         onClick={() => onChange(value + 1)}
         disabled={value >= max}
         aria-label={`Increase ${label}`}
       >
-        <Plus className={icon} />
+        <Plus className={icon} strokeWidth={2.6} />
       </button>
     </div>
   );
@@ -118,7 +145,10 @@ export function FoodImage({ src, alt, className }: { src: string | null; alt: st
     return (
       <div
         aria-hidden
-        className={cn('flex items-center justify-center bg-surface-2 font-display text-3xl text-ink-subtle', className)}
+        className={cn(
+          'flex items-center justify-center bg-accent-soft font-display text-3xl font-bold text-accent-ink',
+          className,
+        )}
       >
         {alt.slice(0, 1)}
       </div>
@@ -145,6 +175,7 @@ export function StatusDot({ tone, pulse }: { tone: Tone; pulse?: boolean }) {
     warning: 'bg-warning',
     danger: 'bg-danger',
     info: 'bg-info',
+    highlight: 'bg-highlight',
   }[tone];
   return (
     <span className='relative inline-flex size-2'>

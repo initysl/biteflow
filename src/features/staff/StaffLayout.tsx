@@ -10,6 +10,7 @@ import {
   UtensilsCrossed,
   Volume2,
   VolumeX,
+  type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, Navigate, Outlet, ScrollRestoration, useLocation } from 'react-router';
@@ -44,8 +45,8 @@ function useSoundPref() {
   return [on, setOn] as const;
 }
 
-/** Chime + announcement when a new ticket or help request arrives. */
-function useAlerts(soundOn: boolean) {
+/** Chime + announcement when a new ticket arrives. */
+function useNewOrderAlerts(soundOn: boolean) {
   const soundRef = useRef(soundOn);
   soundRef.current = soundOn;
   const [announcement, setAnnouncement] = useState('');
@@ -53,36 +54,46 @@ function useAlerts(soundOn: boolean) {
   useEffect(
     () =>
       realtime.on((event) => {
-        if (event.type === 'order.upserted' && event.order.status === 'pending' && !event.order.preparingAt) {
-          const age = Date.now() - Date.parse(event.order.paidAt ?? event.order.createdAt);
-          if (age > 10_000) return; // an edit to an old ticket, not a new one
-          if (soundRef.current) playChime();
-          setAnnouncement(`New order ${event.order.number} for table ${event.order.tableId}`);
-          toast(`New order #${event.order.number}`, {
-            description: `Table ${event.order.tableId} · ${event.order.items.length} items`,
-          });
-        }
+        if (event.type !== 'order.upserted' || event.order.status !== 'pending' || event.order.preparingAt) return;
+        const age = Date.now() - Date.parse(event.order.paidAt ?? event.order.createdAt);
+        if (age > 10_000) return; // an edit to an old ticket, not a new one
+        if (soundRef.current) playChime();
+        setAnnouncement(`New order ${event.order.number} for table ${event.order.tableId}`);
+        toast(`New order #${event.order.number}`, {
+          description: `Table ${event.order.tableId} · ${event.order.items.length} items`,
+        });
       }),
     [],
   );
   return announcement;
 }
 
-const NAV = [
-  { to: 'kitchen', label: 'Kitchen', icon: ChefHat },
-  { to: 'floor', label: 'Floor', icon: LayoutGrid },
-  { to: 'menu', label: 'Menu', icon: UtensilsCrossed },
-  { to: 'tables', label: 'Tables & QR', icon: QrCode },
-  { to: 'reports', label: 'Reports', icon: BarChart3 },
-] as const;
+interface NavItem {
+  to: string;
+  label: string;
+  short: string;
+  icon: LucideIcon;
+  group: 'Service' | 'Back office';
+}
 
-function NavBadge({ count, tone = 'accent' }: { count: number; tone?: 'accent' | 'danger' }) {
+const NAV: NavItem[] = [
+  { to: 'kitchen', label: 'Kitchen', short: 'Kitchen', icon: ChefHat, group: 'Service' },
+  { to: 'floor', label: 'Floor', short: 'Floor', icon: LayoutGrid, group: 'Service' },
+  { to: 'menu', label: 'Menu', short: 'Menu', icon: UtensilsCrossed, group: 'Back office' },
+  { to: 'tables', label: 'Tables & QR', short: 'Tables', icon: QrCode, group: 'Back office' },
+  { to: 'reports', label: 'Reports', short: 'Reports', icon: BarChart3, group: 'Back office' },
+];
+
+const iconButton =
+  'pressable inline-flex size-9 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink';
+
+function CountBadge({ count, tone }: { count: number; tone: 'accent' | 'ink' }) {
   if (!count) return null;
   return (
     <span
       className={cn(
-        'tabular ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold',
-        tone === 'danger' ? 'bg-danger text-on-danger' : 'bg-accent text-on-accent',
+        'tabular ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold',
+        tone === 'accent' ? 'bg-accent text-on-accent' : 'bg-ink text-canvas',
       )}
     >
       {count}
@@ -100,11 +111,12 @@ export function StaffLayout() {
   const status = useConnectionStatus();
   const signedIn = me.isSuccess;
   useRealtimeSubscription(signedIn ? { type: 'subscribe', room: 'staff' } : null);
-  const announcement = useAlerts(soundOn);
+  const announcement = useNewOrderAlerts(soundOn);
 
   const orders = useStaffOrders(signedIn);
   const assistance = useStaffAssistance(signedIn);
   const tables = useStaffTables(signedIn);
+
   // Chime when a help request is added (not when one is resolved).
   const assistCount = assistance.data?.length;
   const prevAssist = useRef(assistCount);
@@ -144,56 +156,89 @@ export function StaffLayout() {
     );
   }
 
-  const counts: Record<string, number> = { kitchen: newCount, floor: floorCount };
+  const counts: Record<string, { count: number; tone: 'accent' | 'ink' }> = {
+    kitchen: { count: newCount, tone: 'accent' },
+    floor: { count: floorCount, tone: 'ink' },
+  };
+  const initials = me.data.name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+  const live = status === 'online';
 
   return (
-    <div className='min-h-dvh bg-canvas md:grid md:grid-cols-[232px_1fr]'>
+    <div className='min-h-dvh bg-canvas md:grid md:grid-cols-[256px_1fr]'>
       <ScrollRestoration />
       <p className='sr-only' aria-live='assertive'>
         {announcement}
       </p>
 
       {/* Sidebar (tablet & desktop) */}
-      <aside className='sticky top-0 hidden h-dvh flex-col border-r border-line bg-surface px-3 py-5 md:flex'>
-        <Link to='/' className='flex items-center gap-2.5 px-2.5'>
-          <img src='/bitflow.svg' alt='' className='size-7' />
-          <span className='min-w-0'>
-            <span className='block font-display text-lg leading-tight font-semibold'>BiteFlow</span>
-            <span className='block truncate text-xs text-ink-subtle'>{config?.restaurantName}</span>
+      <aside className='sticky top-0 hidden h-dvh flex-col gap-6 border-r border-line bg-surface px-4 py-6 md:flex'>
+        <Link to='/' className='flex items-center gap-2.5 px-2'>
+          <span className='flex size-10 items-center justify-center rounded-xl bg-accent text-on-accent'>
+            <UtensilsCrossed className='size-5' />
           </span>
+          <span className='font-display text-xl font-bold'>BiteFlow</span>
         </Link>
-        <nav className='mt-8 space-y-0.5' aria-label='Staff'>
-          {NAV.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                cn(
-                  'flex h-10 items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors',
-                  isActive ? 'bg-surface-2 text-ink' : 'text-ink-muted hover:bg-surface-2/60 hover:text-ink',
-                )
-              }
-            >
-              <Icon className='size-4.5' />
-              {label}
-              <NavBadge count={counts[to] ?? 0} tone={to === 'floor' ? 'danger' : 'accent'} />
-            </NavLink>
+
+        <div className='flex items-center gap-3 rounded-2xl bg-surface-2 p-3'>
+          <span className='flex size-10 shrink-0 items-center justify-center rounded-full bg-ink text-sm font-bold text-canvas'>
+            {initials}
+          </span>
+          <span className='min-w-0'>
+            <span className='block truncate text-sm font-bold'>{me.data.name}</span>
+            <span className='block truncate text-xs text-ink-muted'>{config?.restaurantName}</span>
+          </span>
+        </div>
+
+        <nav className='flex flex-col gap-1' aria-label='Staff'>
+          {(['Service', 'Back office'] as const).map((group) => (
+            <div key={group} className='flex flex-col gap-1'>
+              <p
+                className={cn(
+                  'px-3 pb-1 text-[11px] font-bold tracking-[0.08em] text-ink-subtle uppercase',
+                  group === 'Back office' && 'pt-4',
+                )}
+              >
+                {group}
+              </p>
+              {NAV.filter((n) => n.group === group).map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition-colors',
+                      isActive
+                        ? 'bg-accent-soft font-bold text-accent-ink'
+                        : 'font-semibold text-ink-muted hover:bg-surface-2 hover:text-ink',
+                    )
+                  }
+                >
+                  <Icon className='size-4.5' />
+                  {label}
+                  {counts[to] && <CountBadge {...counts[to]} />}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 
-        <div className='mt-auto space-y-1 border-t border-line pt-4'>
-          <div className='flex items-center gap-2 px-3 py-1.5 text-sm text-ink-muted'>
-            <StatusDot
-              tone={status === 'online' ? 'success' : status === 'connecting' ? 'warning' : 'danger'}
-              pulse={status !== 'online'}
-            />
-            {status === 'online' ? 'Live' : status === 'connecting' ? 'Connecting…' : 'Offline — retrying'}
+        <div className='mt-auto space-y-1'>
+          <div
+            className={cn('flex items-center gap-2 px-3 py-1.5 text-sm font-semibold', live ? 'text-success' : 'text-warning')}
+          >
+            <StatusDot tone={live ? 'success' : 'warning'} pulse={!live} />
+            {live ? 'Live' : status === 'connecting' ? 'Connecting…' : 'Offline — retrying'}
           </div>
           {config?.demoMode && (
             <button
               type='button'
               onClick={() => setResetOpen(true)}
-              className='flex h-9 w-full items-center gap-3 rounded-xl px-3 text-sm text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink'
+              className='flex h-9 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink'
             >
               <RotateCcw className='size-4' /> Reset demo data
             </button>
@@ -202,33 +247,30 @@ export function StaffLayout() {
             href='/'
             target='_blank'
             rel='noreferrer'
-            className='flex h-9 items-center gap-3 rounded-xl px-3 text-sm text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink'
+            className='flex h-9 items-center gap-3 rounded-xl px-3 text-sm font-semibold text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink'
           >
             <ExternalLink className='size-4' /> Guest view
           </a>
-          <div className='flex items-center justify-between gap-1 px-1 pt-2'>
-            <span className='truncate px-2 text-sm font-medium'>{me.data.name}</span>
-            <div className='flex'>
-              <button
-                type='button'
-                onClick={() => setSoundOn(!soundOn)}
-                aria-label={soundOn ? 'Mute alerts' : 'Unmute alerts'}
-                title={soundOn ? 'Mute alerts' : 'Unmute alerts'}
-                className='pressable inline-flex size-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-ink'
-              >
-                {soundOn ? <Volume2 className='size-4.5' /> : <VolumeX className='size-4.5' />}
-              </button>
-              <ThemeToggle />
-              <button
-                type='button'
-                onClick={() => logout.mutate()}
-                aria-label='Sign out'
-                title='Sign out'
-                className='pressable inline-flex size-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-ink'
-              >
-                <LogOut className='size-4.5' />
-              </button>
-            </div>
+          <div className='flex items-center gap-1 border-t border-line px-1 pt-3'>
+            <button
+              type='button'
+              onClick={() => setSoundOn(!soundOn)}
+              aria-label={soundOn ? 'Mute alerts' : 'Unmute alerts'}
+              title={soundOn ? 'Mute alerts' : 'Unmute alerts'}
+              className={iconButton}
+            >
+              {soundOn ? <Volume2 className='size-4.5' /> : <VolumeX className='size-4.5' />}
+            </button>
+            <ThemeToggle />
+            <button
+              type='button'
+              onClick={() => logout.mutate()}
+              aria-label='Sign out'
+              title='Sign out'
+              className={cn(iconButton, 'ml-auto')}
+            >
+              <LogOut className='size-4.5' />
+            </button>
           </div>
         </div>
       </aside>
@@ -236,26 +278,23 @@ export function StaffLayout() {
       {/* Top bar (phones) */}
       <header className='sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-surface/90 px-4 backdrop-blur-xl md:hidden'>
         <span className='flex items-center gap-2'>
-          <img src='/bitflow.svg' alt='' className='size-6' />
-          <span className='font-display font-semibold'>BiteFlow</span>
-          <StatusDot tone={status === 'online' ? 'success' : 'warning'} pulse={status !== 'online'} />
+          <span className='flex size-8 items-center justify-center rounded-lg bg-accent text-on-accent'>
+            <UtensilsCrossed className='size-4' />
+          </span>
+          <span className='font-display font-bold'>BiteFlow</span>
+          <StatusDot tone={live ? 'success' : 'warning'} pulse={!live} />
         </span>
         <div className='flex items-center'>
           <button
             type='button'
             onClick={() => setSoundOn(!soundOn)}
             aria-label={soundOn ? 'Mute alerts' : 'Unmute alerts'}
-            className='pressable inline-flex size-9 items-center justify-center rounded-lg text-ink-muted'
+            className={iconButton}
           >
             {soundOn ? <Volume2 className='size-4.5' /> : <VolumeX className='size-4.5' />}
           </button>
           <ThemeToggle />
-          <button
-            type='button'
-            onClick={() => logout.mutate()}
-            aria-label='Sign out'
-            className='pressable inline-flex size-9 items-center justify-center rounded-lg text-ink-muted'
-          >
+          <button type='button' onClick={() => logout.mutate()} aria-label='Sign out' className={iconButton}>
             <LogOut className='size-4.5' />
           </button>
         </div>
@@ -270,20 +309,22 @@ export function StaffLayout() {
         aria-label='Staff'
         className='fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden'
       >
-        {NAV.map(({ to, label, icon: Icon }) => (
+        {NAV.map(({ to, short, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
               cn(
-                'relative flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium',
-                isActive ? 'text-accent' : 'text-ink-subtle',
+                'relative flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-bold',
+                isActive ? 'text-accent-text' : 'text-ink-subtle',
               )
             }
           >
             <Icon className='size-5' />
-            {label.split(' ')[0]}
-            {(counts[to] ?? 0) > 0 && <span className='absolute top-2.5 right-[calc(50%-18px)] size-2 rounded-full bg-danger' />}
+            {short}
+            {(counts[to]?.count ?? 0) > 0 && (
+              <span className='absolute top-2.5 right-[calc(50%-18px)] size-2 rounded-full bg-accent' />
+            )}
           </NavLink>
         ))}
       </nav>
@@ -310,12 +351,27 @@ export function StaffLayout() {
   );
 }
 
-/** Shared page header for staff screens. */
-export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
+/** Shared page header for staff screens: breadcrumb, title, optional actions. */
+export function PageHeader({
+  section,
+  title,
+  description,
+  actions,
+}: {
+  section?: 'Service' | 'Back office';
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+}) {
   return (
     <div className='flex flex-wrap items-end justify-between gap-4 px-4 pt-6 pb-5 sm:px-8 sm:pt-8'>
       <div>
-        <h1 className='font-display text-3xl font-semibold tracking-tight'>{title}</h1>
+        {section && (
+          <p className='text-sm text-ink-muted'>
+            {section} · <span className='font-bold text-accent-text'>{title}</span>
+          </p>
+        )}
+        <h1 className='mt-1 font-display text-3xl font-bold'>{title}</h1>
         {description && <p className='mt-1 text-ink-muted'>{description}</p>}
       </div>
       {actions && <div className='flex flex-wrap gap-2'>{actions}</div>}

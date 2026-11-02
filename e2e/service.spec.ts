@@ -17,13 +17,13 @@ test('diner order flows through kitchen, floor and bill in real time', async ({ 
   const dinerCtx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
   const diner = await dinerCtx.newPage();
   await diner.goto(`/t/${tableId}?k=${token}`);
-  await expect(diner.getByRole('heading', { name: /Good food/ })).toBeVisible();
+  await expect(diner.getByRole('heading', { name: 'Chef’s picks' })).toBeVisible();
 
   // Diner builds and sends an order to pay later.
-  await diner.getByRole('button', { name: 'View Classic Tiramisu' }).click();
+  await diner.getByRole('region', { name: 'Desserts' }).getByRole('button', { name: 'View Classic Tiramisu' }).click();
   await diner.getByRole('button', { name: /Add to order/ }).click();
   await diner.getByRole('button', { name: 'Add House Mint Lemonade to order' }).click();
-  await diner.getByRole('button', { name: /View order/ }).click();
+  await diner.getByRole('button', { name: /View your order/ }).click();
   await diner.getByText('Pay later').click();
   await diner.getByRole('button', { name: 'Send order to kitchen' }).click();
   await expect(diner).toHaveURL(/\/orders$/);
@@ -48,7 +48,7 @@ test('diner order flows through kitchen, floor and bill in real time', async ({ 
   const helpRow = staff.getByRole('listitem').filter({ hasText: `Table ${tableId} · Water` });
   await expect(helpRow).toBeVisible();
   await helpRow.getByRole('button', { name: 'Done' }).click();
-  await expect(diner.getByRole('button', { name: 'Call staff', exact: true })).toBeVisible();
+  await expect(diner.getByRole('button', { name: 'Call staff', exact: true }).first()).toBeVisible();
 
   // Serve, request the bill, take payment.
   await staff
@@ -72,9 +72,9 @@ test('diner order flows through kitchen, floor and bill in real time', async ({ 
 });
 
 async function callStaff(diner: Page) {
-  await diner.getByRole('button', { name: 'Call staff', exact: true }).click();
+  await diner.getByRole('button', { name: 'Call staff', exact: true }).first().click();
   await diner.getByRole('button', { name: /^Water/ }).click();
-  await expect(diner.getByRole('button', { name: /Help is on the way/ })).toBeVisible();
+  await expect(diner.getByRole('button', { name: /Help is on the way/ }).first()).toBeVisible();
 }
 
 test('table links without a valid token are read-only', async ({ page }) => {

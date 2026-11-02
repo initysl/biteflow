@@ -1,4 +1,5 @@
 import * as RadixSwitch from '@radix-ui/react-switch';
+import { ChevronDown } from 'lucide-react';
 import {
   forwardRef,
   useId,
@@ -7,11 +8,10 @@ import {
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from 'react';
-import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const control =
-  'w-full rounded-xl border border-line-strong bg-surface px-3.5 text-[15px] text-ink placeholder:text-ink-subtle ' +
+  'w-full rounded-2xl border-[1.5px] border-line-strong bg-surface px-4 text-[15px] text-ink placeholder:text-ink-subtle ' +
   'transition-[border-color,box-shadow] duration-150 outline-none ' +
   'focus:border-accent focus:ring-4 focus:ring-accent/15 aria-[invalid=true]:border-danger disabled:opacity-60';
 
@@ -19,14 +19,14 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
   { className, ...props },
   ref,
 ) {
-  return <input ref={ref} className={cn(control, 'h-11', className)} {...props} />;
+  return <input ref={ref} className={cn(control, 'h-12', className)} {...props} />;
 });
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea(
   { className, rows = 3, ...props },
   ref,
 ) {
-  return <textarea ref={ref} rows={rows} className={cn(control, 'resize-none py-2.5 leading-relaxed', className)} {...props} />;
+  return <textarea ref={ref} rows={rows} className={cn(control, 'resize-none py-3 leading-relaxed', className)} {...props} />;
 });
 
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(function Select(
@@ -35,13 +35,35 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
 ) {
   return (
     <div className='relative'>
-      <select ref={ref} className={cn(control, 'h-11 appearance-none pr-10', className)} {...props}>
+      <select ref={ref} className={cn(control, 'h-12 appearance-none pr-10', className)} {...props}>
         {children}
       </select>
-      <ChevronDown className='pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-ink-subtle' />
+      <ChevronDown className='pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-ink-subtle' />
     </div>
   );
 });
+
+/** Rounded search field with a leading icon slot. */
+export const SearchField = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { icon: ReactNode }>(
+  function SearchField({ className, icon, ...props }, ref) {
+    return (
+      <label
+        className={cn(
+          'flex h-12 items-center gap-2.5 rounded-full bg-surface px-4 shadow-card focus-within:ring-4 focus-within:ring-accent/15',
+          className,
+        )}
+      >
+        <span className='text-ink-subtle'>{icon}</span>
+        <input
+          ref={ref}
+          type='search'
+          className='h-full min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-subtle'
+          {...props}
+        />
+      </label>
+    );
+  },
+);
 
 /** Label + control + hint/error, wired up with ids for assistive tech. */
 export function Field({
@@ -61,7 +83,7 @@ export function Field({
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
   return (
     <div className={cn('space-y-1.5', className)}>
-      <label htmlFor={id} className='block text-sm font-medium text-ink'>
+      <label htmlFor={id} className='block text-sm font-bold text-ink'>
         {label}
       </label>
       {children({ id, 'aria-describedby': describedBy, 'aria-invalid': error ? true : undefined })}
@@ -75,6 +97,33 @@ export function Field({
         </p>
       ) : null}
     </div>
+  );
+}
+
+export function SwitchControl({
+  checked,
+  onCheckedChange,
+  label,
+  id,
+  disabled,
+}: {
+  checked: boolean;
+  onCheckedChange: (v: boolean) => void;
+  label?: string;
+  id?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <RadixSwitch.Root
+      id={id}
+      checked={checked}
+      onCheckedChange={onCheckedChange}
+      disabled={disabled}
+      aria-label={label}
+      className='relative h-7 w-12 shrink-0 rounded-full bg-line-strong transition-colors duration-200 data-[state=checked]:bg-success disabled:opacity-50'
+    >
+      <RadixSwitch.Thumb className='block size-6 translate-x-0.5 rounded-full bg-white shadow-raised transition-transform duration-200 ease-[var(--ease-out)] data-[state=checked]:translate-x-[22px]' />
+    </RadixSwitch.Root>
   );
 }
 
@@ -93,35 +142,30 @@ export function Switch({
 }) {
   const id = useId();
   return (
-    <div className='flex items-center justify-between gap-4'>
+    <div className='flex items-center justify-between gap-4 rounded-2xl bg-surface-2 px-4 py-3'>
       <label htmlFor={id} className='min-w-0'>
-        <span className='block text-sm font-medium'>{label}</span>
-        {description ? <span className='block text-sm text-ink-subtle'>{description}</span> : null}
+        <span className='block text-sm font-bold'>{label}</span>
+        {description ? <span className='block text-sm text-ink-muted'>{description}</span> : null}
       </label>
-      <RadixSwitch.Root
-        id={id}
-        checked={checked}
-        onCheckedChange={onCheckedChange}
-        disabled={disabled}
-        className='relative h-7 w-12 shrink-0 rounded-full bg-line-strong transition-colors duration-200 data-[state=checked]:bg-accent disabled:opacity-50'
-      >
-        <RadixSwitch.Thumb className='block size-6 translate-x-0.5 rounded-full bg-white shadow-raised transition-transform duration-200 ease-[var(--ease-out)] data-[state=checked]:translate-x-[22px]' />
-      </RadixSwitch.Root>
+      <SwitchControl id={id} checked={checked} onCheckedChange={onCheckedChange} disabled={disabled} />
     </div>
   );
 }
 
-/** Toggleable pill used for multi-select chips (dietary tags, filters). */
+/** Toggleable pill used for filters and multi-select chips. */
 export function Chip({
   selected,
   onClick,
   children,
   className,
+  tone = 'ink',
 }: {
   selected: boolean;
   onClick: () => void;
   children: ReactNode;
   className?: string;
+  /** `accent` fills orange when selected (primary filters); `ink` fills black. */
+  tone?: 'ink' | 'accent';
 }) {
   return (
     <button
@@ -129,8 +173,12 @@ export function Chip({
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        'pressable inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors duration-150',
-        selected ? 'border-ink bg-ink text-canvas' : 'border-line-strong bg-surface text-ink-muted hover:text-ink',
+        'pressable inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-bold transition-colors duration-150',
+        selected
+          ? tone === 'accent'
+            ? 'bg-accent text-on-accent'
+            : 'bg-ink text-canvas'
+          : 'border border-line-strong bg-surface text-ink-muted hover:text-ink',
         className,
       )}
     >
