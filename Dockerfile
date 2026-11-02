@@ -15,8 +15,8 @@ WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package.json ./
+# Persistent storage is mounted at /data by the host (e.g. a Railway volume or `docker run -v`).
 RUN mkdir -p /data && chown node:node /data
-VOLUME /data
 EXPOSE 3000
 USER node
 HEALTHCHECK --interval=30s --timeout=3s CMD node -e "fetch('http://localhost:'+process.env.PORT+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"

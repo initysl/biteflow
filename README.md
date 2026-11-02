@@ -115,6 +115,29 @@ docker run -p 3000:3000 -v biteflow-data:/data \
 
 The app is a single Node process with SQLite, so one small instance with a persistent volume is enough for a restaurant. Run it behind HTTPS: session cookies are `Secure` in production.
 
+### Railway
+
+`railway.json` tells Railway to build the Dockerfile and health-check `/api/health`.
+
+1. **New project → Deploy from GitHub repo**, pick this repo.
+2. **Add a volume** to the service, mounted at `/data` (the database lives at `/data/biteflow.db`).
+3. **Variables:**
+
+   | Variable | Value |
+   | --- | --- |
+   | `PORT` | `3000` (matches the domain's target port below) |
+   | `RAILWAY_RUN_UID` | `0` — Railway volumes are root-owned; this lets the app write to it |
+   | `STAFF_DEMO_PIN` | your 4-digit staff PIN (applied when the database is first created) |
+   | `APP_URL` | `https://${{RAILWAY_PUBLIC_DOMAIN}}` (or your custom domain) |
+   | `DEMO_MODE` | `true` for a public demo with sample orders, `false` for a real restaurant |
+   | `RESTAURANT_NAME`, `CURRENCY`, `LOCALE` | optional |
+   | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | optional |
+
+4. **Settings → Networking → Generate domain** (target port `3000`).
+5. Keep it to **one replica**: SQLite and the realtime hub live in a single process.
+
+For Stripe, add a webhook endpoint at `https://<your-domain>/api/payments/stripe/webhook` listening for `checkout.session.completed`.
+
 ## Notes
 
 - Sample allergen data is illustrative. A real restaurant must enter and verify its own.
