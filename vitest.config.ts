@@ -12,5 +12,7 @@ export default defineConfig({
     include: ['tests/**/*.test.{ts,tsx}'],
     environment: 'node',
     setupFiles: ['tests/setup.ts'],
+    // PIN hashing (bcrypt) is deliberately slow; leave headroom on busy machines.
+    testTimeout: 15_000,
   },
 });

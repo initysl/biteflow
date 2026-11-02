@@ -1,17 +1,18 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, DownloadCloud, Plus, Search, Star, UtensilsCrossed } from 'lucide-react';
+import { AlertTriangle, DownloadCloud, Plus, Search, Star, UtensilsCrossed, Lock } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { CATEGORIES, CATEGORY_LABELS, STATION_LABELS, type Category, type MenuItem } from '@shared/schemas';
 import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
-import { queryKeys, useConfig, useMenu, useMoney } from '@/lib/queries';
+import { queryKeys, useConfig, useIsManager, useMenu, useMoney } from '@/lib/queries';
 import { useMediaQuery } from '@/lib/useMediaQuery';
 import { Button } from '@/ui/Button';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { EmptyState, FoodImage, Skeleton } from '@/ui/Display';
 import { Chip, SearchField, SwitchControl } from '@/ui/Form';
 import { MenuItemDialog, MenuItemPanel } from './MenuItemDialog';
+import { isApprovalCancelled, useManagerAction } from './managerApproval';
 import { PageHeader } from './StaffLayout';
 
 function useToggleAvailability() {
@@ -96,15 +97,21 @@ export function MenuAdminPage() {
   const [dialog, setDialog] = useState<{ open: boolean; item: MenuItem | null }>({ open: false, item: null });
   const [confirmImport, setConfirmImport] = useState(false);
 
+  const runAsManager = useManagerAction();
+  const isManager = useIsManager();
   const importSample = useMutation({
-    mutationFn: () => api<MenuItem[]>('/staff/menu/import-sample', { method: 'POST' }),
+    mutationFn: () =>
+      runAsManager('Replacing the menu', (headers) => api<MenuItem[]>('/staff/menu/import-sample', { method: 'POST', headers })),
     onSuccess: (items) => {
       qc.setQueryData(queryKeys.menu, items);
       setConfirmImport(false);
       setSelectedId(null);
       toast.success(`Imported ${items.length} items`, { description: 'Remember to add allergen information before service.' });
     },
-    onError: (err) => toast.error(errorMessage(err)),
+    onError: (err) => {
+      setConfirmImport(false);
+      if (!isApprovalCancelled(err)) toast.error(errorMessage(err));
+    },
   });
 
   const q = query.trim().toLowerCase();
@@ -130,6 +137,7 @@ export function MenuAdminPage() {
             {config?.demoMode && (
               <Button variant='secondary' onClick={() => setConfirmImport(true)}>
                 <DownloadCloud className='size-4' /> Import sample menu
+                {!isManager && <Lock className='size-3.5 opacity-60' aria-label='Needs a manager' />}
               </Button>
             )}
             <Button onClick={() => setDialog({ open: true, item: null })}>

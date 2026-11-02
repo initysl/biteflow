@@ -18,6 +18,7 @@ import { PaySheet } from './PaySheet';
 import { ReceiptDialog } from './ReceiptDialog';
 
 const HEADLINE: Record<OrderStatus, string> = {
+  held: 'Not sent yet',
   awaiting_payment: 'Payment needed',
   pending: 'Sent to the kitchen',
   preparing: 'Cooking now',

@@ -1,3 +1,4 @@
+import { Lock } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -16,12 +17,13 @@ import {
 } from '@shared/schemas';
 import { type MenuItemInput, menuItemInputSchema } from '@shared/validation';
 import { api, errorMessage } from '@/lib/api';
-import { queryKeys } from '@/lib/queries';
+import { queryKeys, useIsManager } from '@/lib/queries';
 import { Button } from '@/ui/Button';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { FoodImage } from '@/ui/Display';
 import { Chip, Field, Input, Select, Switch, Textarea } from '@/ui/Form';
 import { Dialog } from '@/ui/Sheet';
+import { isApprovalCancelled, useManagerAction } from './managerApproval';
 
 interface FormState {
   name: string;
@@ -101,14 +103,18 @@ function useMenuItemForm(item: MenuItem | null, active: boolean, onDone: () => v
     onError: (err) => toast.error(errorMessage(err)),
   });
 
+  const runAsManager = useManagerAction();
   const remove = useMutation({
-    mutationFn: () => api(`/staff/menu/${item!.id}`, { method: 'DELETE' }),
+    mutationFn: () =>
+      runAsManager(`Deleting ${item!.name}`, (headers) => api(`/staff/menu/${item!.id}`, { method: 'DELETE', headers })),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.menu });
       toast.success(`Removed ${item!.name}`);
       onDone();
     },
-    onError: (err) => toast.error(errorMessage(err)),
+    onError: (err) => {
+      if (!isApprovalCancelled(err)) toast.error(errorMessage(err));
+    },
   });
 
   const submit = (e: React.FormEvent) => {
@@ -303,6 +309,7 @@ export function MenuItemDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const state = useMenuItemForm(item, open, () => onOpenChange(false));
+  const isManager = useIsManager();
   const [confirmDelete, setConfirmDelete] = useState(false);
   return (
     <>
@@ -316,6 +323,7 @@ export function MenuItemDialog({
             {item && (
               <Button variant='ghost' className='mr-auto text-danger hover:text-danger' onClick={() => setConfirmDelete(true)}>
                 Delete
+                {!isManager && <Lock className='size-3.5 opacity-60' aria-label='Needs a manager' />}
               </Button>
             )}
             <Button variant='ghost' onClick={() => onOpenChange(false)}>
@@ -337,6 +345,7 @@ export function MenuItemDialog({
 /** Inline editor shown beside the grid on wide screens. */
 export function MenuItemPanel({ item, onClose }: { item: MenuItem; onClose: () => void }) {
   const state = useMenuItemForm(item, true, onClose);
+  const isManager = useIsManager();
   const [confirmDelete, setConfirmDelete] = useState(false);
   return (
     <div className='flex flex-col gap-5'>
@@ -351,6 +360,7 @@ export function MenuItemPanel({ item, onClose }: { item: MenuItem; onClose: () =
       <div className='grid grid-cols-2 gap-2.5'>
         <Button variant='secondary' className='text-danger' onClick={() => setConfirmDelete(true)}>
           Delete
+          {!isManager && <Lock className='size-3.5 opacity-60' aria-label='Needs a manager' />}
         </Button>
         <Button type='submit' form='menu-item-panel-form' variant='dark' loading={state.save.isPending}>
           Save changes

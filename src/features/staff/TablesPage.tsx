@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Download, ExternalLink, MoreHorizontal, Pencil, Plus, Printer, RefreshCcw, Trash2, Users } from 'lucide-react';
+import { Download, ExternalLink, MoreHorizontal, Pencil, Plus, Printer, RefreshCcw, Trash2, Users, Lock } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -7,12 +7,13 @@ import { toast } from 'sonner';
 import type { TableWithToken } from '@shared/schemas';
 import { tableInputSchema } from '@shared/validation';
 import { api, errorMessage } from '@/lib/api';
-import { queryKeys, useConfig, useStaffTables } from '@/lib/queries';
+import { queryKeys, useConfig, useIsManager, useStaffTables } from '@/lib/queries';
 import { Button } from '@/ui/Button';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { Card, Skeleton } from '@/ui/Display';
 import { Field, Input } from '@/ui/Form';
 import { Dialog } from '@/ui/Sheet';
+import { isApprovalCancelled, useManagerAction } from './managerApproval';
 import { PageHeader } from './StaffLayout';
 
 function useTableUrl() {
@@ -59,6 +60,7 @@ function TableCard({
   onRotate: () => void;
   onDelete: () => void;
 }) {
+  const isManager = useIsManager();
   const tableUrl = useTableUrl();
   const url = tableUrl(table);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -91,9 +93,9 @@ function TableCard({
               >
                 {[
                   { icon: Pencil, label: 'Edit details', run: onEdit },
-                  { icon: RefreshCcw, label: 'Regenerate QR code', run: onRotate },
-                  { icon: Trash2, label: 'Remove table', run: onDelete, danger: true },
-                ].map(({ icon: Icon, label, run, danger }) => (
+                  { icon: RefreshCcw, label: 'Regenerate QR code', run: onRotate, manager: true },
+                  { icon: Trash2, label: 'Remove table', run: onDelete, danger: true, manager: true },
+                ].map(({ icon: Icon, label, run, danger, manager }) => (
                   <button
                     key={label}
                     role='menuitem'
@@ -105,6 +107,7 @@ function TableCard({
                     className={`flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm hover:bg-surface-2 ${danger ? 'text-danger' : ''}`}
                   >
                     <Icon className='size-4' /> {label}
+                    {manager && !isManager && <Lock className='ml-auto size-3.5 text-ink-subtle' aria-label='Needs a manager' />}
                   </button>
                 ))}
               </div>
@@ -265,23 +268,34 @@ export function TablesPage() {
     };
   }, [printing]);
 
+  const runAsManager = useManagerAction();
   const rotate = useMutation({
-    mutationFn: (id: string) => api<TableWithToken>(`/staff/tables/${id}/rotate-token`, { method: 'POST' }),
+    mutationFn: (id: string) =>
+      runAsManager('Regenerating a QR code', (headers) =>
+        api<TableWithToken>(`/staff/tables/${id}/rotate-token`, { method: 'POST', headers }),
+      ),
     onSuccess: (t) => {
       qc.invalidateQueries({ queryKey: queryKeys.staffTables });
       toast.success(`New QR code for ${t.label}`, { description: 'Reprint it — the old code no longer works.' });
       setRotating(null);
     },
-    onError: (err) => toast.error(errorMessage(err)),
+    onError: (err) => {
+      setRotating(null);
+      if (!isApprovalCancelled(err)) toast.error(errorMessage(err));
+    },
   });
   const remove = useMutation({
-    mutationFn: (id: string) => api(`/staff/tables/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: string) =>
+      runAsManager('Removing a table', (headers) => api(`/staff/tables/${id}`, { method: 'DELETE', headers })),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.staffTables });
       toast.success(`${deleting?.label} removed`);
       setDeleting(null);
     },
-    onError: (err) => toast.error(errorMessage(err)),
+    onError: (err) => {
+      setDeleting(null);
+      if (!isApprovalCancelled(err)) toast.error(errorMessage(err));
+    },
   });
 
   return (

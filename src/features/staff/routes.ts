@@ -4,5 +4,6 @@ export { KitchenPage } from './KitchenPage';
 export { LoginPage } from './LoginPage';
 export { MenuAdminPage } from './MenuAdminPage';
 export { ReportsPage } from './ReportsPage';
+export { RegisterPage } from './register/RegisterPage';
 export { StaffLayout } from './StaffLayout';
 export { TablesPage } from './TablesPage';

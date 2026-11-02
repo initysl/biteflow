@@ -11,6 +11,7 @@ import { Button } from '@/ui/Button';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { Badge, EmptyState, Skeleton } from '@/ui/Display';
 import { Chip } from '@/ui/Form';
+import { isApprovalCancelled, useManagerAction } from './managerApproval';
 import { PageHeader } from './StaffLayout';
 
 type KitchenStatus = (typeof KITCHEN_STATUSES)[number];
@@ -54,6 +55,25 @@ function useTransition() {
 function Ticket({ order, station, now }: { order: Order; station: Station | 'all'; now: number }) {
   const transition = useTransition();
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const runAsManager = useManagerAction();
+  const qc = useQueryClient();
+  const voidOrder = useMutation({
+    mutationFn: () =>
+      runAsManager(`Voiding order #${order.number}`, (headers) =>
+        api<Order>(`/staff/orders/${order.id}/void`, { method: 'POST', headers }),
+      ),
+    onSuccess: (o) => {
+      qc.setQueryData<Order[]>(queryKeys.staffOrders, (prev) => prev?.map((x) => (x.id === o.id ? o : x)));
+      setConfirmCancel(false);
+      toast(`Order #${o.number} voided`);
+    },
+    onError: (err) => {
+      setConfirmCancel(false);
+      if (!isApprovalCancelled(err)) toast.error(errorMessage(err));
+    },
+  });
+  const takeaway = order.type === 'takeaway';
+  const where = takeaway ? (order.customerName ?? 'The takeaway customer') : `Table ${order.tableId}`;
   const col = COLUMNS[order.status as KitchenStatus];
   const mins = minutesSince(kitchenStart(order), now);
   const tone = TONES[mins >= 20 ? 'late' : mins >= 12 ? 'warn' : 'ok'];
@@ -63,12 +83,18 @@ function Ticket({ order, station, now }: { order: Order; station: Station | 'all
   return (
     <article
       className={cn('animate-arrive overflow-hidden rounded-[22px] border-[1.5px] bg-surface shadow-card', tone.border)}
-      aria-label={`Order ${order.number}, table ${order.tableId}`}
+      aria-label={takeaway ? `Order ${order.number}, takeaway` : `Order ${order.number}, table ${order.tableId}`}
     >
       <header className={cn('flex items-center justify-between gap-2 px-4 py-3', tone.head)}>
         <div className='flex items-baseline gap-2'>
-          <span className='font-display text-2xl font-bold'>T{order.tableId}</span>
-          <span className='tabular text-sm font-semibold text-ink-muted'>#{order.number}</span>
+          <span className='font-display text-2xl font-bold'>{takeaway ? 'TA' : `T${order.tableId}`}</span>
+          <span className='tabular text-sm font-semibold text-ink-muted'>
+            #{order.number}
+            {takeaway && order.customerName && ` · ${order.customerName}`}
+          </span>
+          <span className='rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-ink-muted uppercase'>
+            {order.source === 'pos' ? 'POS' : 'QR'}
+          </span>
         </div>
         <span className={cn('tabular inline-flex items-center gap-1 text-sm font-extrabold', tone.timer)}>
           <Clock className='size-3.5' strokeWidth={2.6} />
@@ -115,8 +141,8 @@ function Ticket({ order, station, now }: { order: Order; station: Station | 'all
           <Button
             variant='ghost'
             size='icon'
-            aria-label='Cancel order'
-            title='Cancel order'
+            aria-label='Void order'
+            title='Void order (manager)'
             disabled={transition.isPending}
             onClick={() => setConfirmCancel(true)}
           >
@@ -124,7 +150,7 @@ function Ticket({ order, station, now }: { order: Order; station: Station | 'all
           </Button>
         )}
         <Badge tone={order.paymentStatus === 'paid' ? 'success' : 'neutral'}>
-          {order.paymentStatus === 'paid' ? 'Paid' : 'Tab'}
+          {order.paymentStatus === 'paid' ? 'Paid' : takeaway ? 'Unpaid' : 'Tab'}
         </Badge>
         <Button
           className='ml-auto'
@@ -133,19 +159,19 @@ function Ticket({ order, station, now }: { order: Order; station: Station | 'all
           disabled={transition.isPending}
           onClick={() => transition.mutate({ id: order.id, status: col.next })}
         >
-          {col.action}
+          {takeaway && order.status === 'ready' ? 'Picked up' : col.action}
         </Button>
       </footer>
       <ConfirmDialog
         open={confirmCancel}
         onOpenChange={setConfirmCancel}
-        title={`Cancel order #${order.number}?`}
-        confirmLabel='Cancel order'
+        title={`Void order #${order.number}?`}
+        confirmLabel='Void order'
         tone='danger'
-        loading={pendingFor === 'cancelled'}
-        onConfirm={() => transition.mutate({ id: order.id, status: 'cancelled' }, { onSuccess: () => setConfirmCancel(false) })}
+        loading={voidOrder.isPending}
+        onConfirm={() => voidOrder.mutate()}
       >
-        Table {order.tableId} will see the order as cancelled. This can’t be undone.
+        {where} will see the order as cancelled. Voids need a manager and can’t be undone.
       </ConfirmDialog>
     </article>
   );

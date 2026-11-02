@@ -145,7 +145,7 @@ export function bindRealtimeToQueries(qc: QueryClient) {
           next[i] = order;
           return next;
         });
-        qc.invalidateQueries({ queryKey: queryKeys.tableOrders(order.tableId) });
+        if (order.tableId) qc.invalidateQueries({ queryKey: queryKeys.tableOrders(order.tableId) });
         qc.invalidateQueries({ queryKey: queryKeys.staffReports });
         break;
       }

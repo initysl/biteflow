@@ -2,6 +2,8 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    /** Machine-readable reason from the server, e.g. `manager_approval`. */
+    public code?: string,
   ) {
     super(message);
   }
@@ -9,12 +11,15 @@ export class ApiError extends Error {
 
 type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 
-export async function api<T>(path: string, init: { method?: Method; body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
+export async function api<T>(
+  path: string,
+  init: { method?: Method; body?: unknown; signal?: AbortSignal; headers?: Record<string, string> } = {},
+): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`/api${path}`, {
       method: init.method ?? 'GET',
-      headers: init.body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      headers: { ...(init.body !== undefined && { 'Content-Type': 'application/json' }), ...init.headers },
       body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
       credentials: 'same-origin',
       signal: init.signal,
@@ -24,7 +29,7 @@ export async function api<T>(path: string, init: { method?: Method; body?: unkno
   }
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(res.status, data?.error ?? `Request failed (${res.status})`);
+  if (!res.ok) throw new ApiError(res.status, data?.error ?? `Request failed (${res.status})`, data?.details?.code);
   return data as T;
 }
 

@@ -59,22 +59,22 @@ export function LandingPage() {
       </header>
 
       <main>
-        <section className='mx-auto grid max-w-6xl items-center gap-12 px-4 pt-10 pb-20 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pt-16'>
+        <section className='mx-auto grid max-w-6xl items-center gap-12 px-4 pt-6 pb-20 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pt-8'>
           <div>
             <p className='inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-sm text-ink-muted'>
               <MonitorSmartphone className='size-4 text-accent' />
               QR ordering for independent restaurants
             </p>
-            <h1 className='mt-6 font-display text-5xl leading-[0.98] font-extrabold sm:text-6xl lg:text-7xl'>
+            <h1 className='mt-5 font-display text-5xl leading-[0.98] font-extrabold sm:text-6xl lg:text-7xl'>
               Table service,
               <br />
               <span className='text-accent-text'>without the wait.</span>
             </h1>
-            <p className='mt-6 max-w-lg text-lg text-ink-muted'>
+            <p className='mt-5 max-w-lg text-lg text-ink-muted'>
               Guests scan, order and pay from their table. Your kitchen sees it the same second. Your floor team spends time on
               hospitality, not order pads.
             </p>
-            <div className='mt-8 flex flex-wrap gap-3'>
+            <div className='mt-7 flex flex-wrap gap-3'>
               {config?.demoMode !== false && (
                 <Button size='lg' loading={openDemo.isPending} onClick={() => openDemo.mutate()}>
                   Try a demo table <ArrowRight className='size-4' />
@@ -84,8 +84,17 @@ export function LandingPage() {
                 Open the staff console
               </Link>
             </div>
+            {config?.demoPin && (
+              <p className='mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted'>
+                <span className='font-bold text-ink'>Staff demo PIN</span>
+                <span className='tabular rounded-full bg-highlight px-2.5 py-0.5 font-display text-[15px] font-bold tracking-[0.18em] text-on-highlight'>
+                  {config.demoPin}
+                </span>
+                <span>· run the register, kitchen and floor; voids and deletions need a manager</span>
+              </p>
+            )}
             {config?.demoMode && (
-              <p className='mt-4 text-sm text-ink-subtle'>
+              <p className='mt-2 text-sm text-ink-subtle'>
                 Tip: open the demo table on your phone and the staff console on a laptop to watch orders arrive live.
               </p>
             )}

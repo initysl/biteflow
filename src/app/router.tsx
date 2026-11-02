@@ -29,7 +29,8 @@ export const router = createBrowserRouter([
     lazy: async () => ({ Component: (await staff()).StaffLayout }),
     errorElement: <RouteErrorPage />,
     children: [
-      { index: true, element: <Navigate to='kitchen' replace /> },
+      { index: true, element: <Navigate to='register' replace /> },
+      { path: 'register', lazy: async () => ({ Component: (await staff()).RegisterPage }) },
       { path: 'kitchen', lazy: async () => ({ Component: (await staff()).KitchenPage }) },
       { path: 'floor', lazy: async () => ({ Component: (await staff()).FloorPage }) },
       { path: 'menu', lazy: async () => ({ Component: (await staff()).MenuAdminPage }) },

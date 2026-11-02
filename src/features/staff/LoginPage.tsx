@@ -18,7 +18,7 @@ export function LoginPage() {
   const location = useLocation();
   const qc = useQueryClient();
   const { data: config } = useConfig();
-  const from = (location.state as { from?: string } | null)?.from ?? '/staff/kitchen';
+  const from = (location.state as { from?: string } | null)?.from ?? '/staff/register';
 
   const login = useMutation({
     mutationFn: (value: string) => api<StaffUser>('/auth/login', { method: 'POST', body: { pin: value } }),

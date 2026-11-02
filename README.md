@@ -25,6 +25,8 @@ Kitchen staff and floor managers get a synchronized, real-time Kitchen Display S
 
 **For staff** (`/staff`, PIN sign-in)
 
+- **Register (POS)**: product grid and order ticket for dine-in (by table) or takeaway orders, with item and order notes. **Hold** parks a ticket without telling the kitchen and **Held orders** recalls it. **Send to kitchen** fires it to the KDS and can print an 80mm kitchen ticket. Dine-in orders go on the table's bill, which guests also see on their phones; takeaway orders are paid from the Takeaway queue.
+- **Manager approval**: voiding a sent order, deleting dishes or tables, regenerating QR codes, importing the sample menu and resetting demo data need a manager. A manager is signed in, or keys in their PIN on the staff member's screen, as on a real till.
 - **Kitchen display**: New / Preparing / Ready columns, station filters (grill, pantry, pastry, bar), ticket timers that turn amber and red, and an audible chime for new tickets
 - **Floor**: one queue for help requests, bill requests and plates ready to run, plus a live table map with open tabs
 - **Menu**: add and edit dishes, toggle sold-out instantly, manage dietary and allergen data
@@ -81,15 +83,16 @@ Key design decisions:
 
 Copy `.env.example` to `.env`. Everything is optional in development.
 
-| Variable                                | Default                           | Purpose                                                                              |
-| --------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------ |
-| `APP_URL`                               | `http://localhost:3000`           | Public URL, used in QR codes and Stripe redirects                                    |
-| `DATABASE_URL`                          | `./data/biteflow.db`              | SQLite file, created and migrated on start                                           |
-| `RESTAURANT_NAME`, `CURRENCY`, `LOCALE` | `BiteFlow Bistro`, `USD`, `en-US` | Branding and money formatting                                                        |
-| `DEMO_MODE`                             | on in dev, off in prod            | Seeds sample activity and shows demo helpers                                         |
-| `STAFF_DEMO_PIN`                        | `1234`                            | 4-digit PIN for the first staff account (applied when the database is first created) |
-| `STRIPE_SECRET_KEY`                     | none                              | Enables real Stripe Checkout. Without it, card payments use a labelled demo flow     |
-| `STRIPE_WEBHOOK_SECRET`                 | none                              | Verifies `POST /api/payments/stripe/webhook`                                         |
+| Variable                                | Default                           | Purpose                                                                                                                                                |
+| --------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `APP_URL`                               | `http://localhost:3000`           | Public URL, used in QR codes and Stripe redirects                                                                                                      |
+| `DATABASE_URL`                          | `./data/biteflow.db`              | SQLite file, created and migrated on start                                                                                                             |
+| `RESTAURANT_NAME`, `CURRENCY`, `LOCALE` | `BiteFlow Bistro`, `USD`, `en-US` | Branding and money formatting                                                                                                                          |
+| `DEMO_MODE`                             | on in dev, off in prod            | Seeds sample activity and shows demo helpers                                                                                                           |
+| `STAFF_DEMO_PIN`                        | `1234`                            | 4-digit PIN for the first staff account (applied when the database is first created)                                                                   |
+| `MANAGER_PIN`                           | none                              | Private 4-digit PIN for the manager account, which approves voids and destructive changes. In demo mode the public PIN is always a plain staff account |
+| `STRIPE_SECRET_KEY`                     | none                              | Enables real Stripe Checkout. Without it, card payments use a labelled demo flow                                                                       |
+| `STRIPE_WEBHOOK_SECRET`                 | none                              | Verifies `POST /api/payments/stripe/webhook`                                                                                                           |
 
 To test Stripe locally, use a test-mode key and `stripe listen --forward-to localhost:3000/api/payments/stripe/webhook`. Payments are also confirmed when the guest returns from Checkout, so the webhook is optional in development.
 
@@ -123,15 +126,16 @@ The app is a single Node process with SQLite, so one small instance with a persi
 2. **Add a volume** to the service, mounted at `/data` (the database lives at `/data/biteflow.db`).
 3. **Variables:**
 
-   | Variable | Value |
-   | --- | --- |
-   | `PORT` | `3000` (matches the domain's target port below) |
-   | `RAILWAY_RUN_UID` | `0` — Railway volumes are root-owned; this lets the app write to it |
-   | `STAFF_DEMO_PIN` | your 4-digit staff PIN (applied when the database is first created) |
-   | `APP_URL` | `https://${{RAILWAY_PUBLIC_DOMAIN}}` (or your custom domain) |
-   | `DEMO_MODE` | `true` for a public demo with sample orders, `false` for a real restaurant |
-   | `RESTAURANT_NAME`, `CURRENCY`, `LOCALE` | optional |
-   | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | optional |
+   | Variable                                     | Value                                                                               |
+   | -------------------------------------------- | ----------------------------------------------------------------------------------- |
+   | `PORT`                                       | `3000` (matches the domain's target port below)                                     |
+   | `RAILWAY_RUN_UID`                            | `0` — Railway volumes are root-owned; this lets the app write to it                 |
+   | `STAFF_DEMO_PIN`                             | the public 4-digit PIN for visitors (applied when the database is first created)    |
+   | `MANAGER_PIN`                                | your private 4-digit PIN; the only one that can approve voids, deletions and resets |
+   | `APP_URL`                                    | `https://${{RAILWAY_PUBLIC_DOMAIN}}` (or your custom domain)                        |
+   | `DEMO_MODE`                                  | `true` for a public demo with sample orders, `false` for a real restaurant          |
+   | `RESTAURANT_NAME`, `CURRENCY`, `LOCALE`      | optional                                                                            |
+   | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | optional                                                                            |
 
 4. **Settings → Networking → Generate domain** (target port `3000`).
 5. Keep it to **one replica**: SQLite and the realtime hub live in a single process.
