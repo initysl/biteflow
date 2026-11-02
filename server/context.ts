@@ -28,6 +28,8 @@ export const silentBroadcaster: Broadcaster = {
 export function emitOrder({ realtime }: Pick<AppContext, 'realtime'>, order: Order) {
   const event: ServerEvent = { type: 'order.upserted', order };
   realtime.toStaff(event);
+  // Takeaway orders have no table, and held tickets are the register's business only.
+  if (!order.tableId || order.status === 'held') return;
   realtime.toTable(order.tableId, event);
   emitTables({ realtime }, order.tableId);
 }

@@ -7,23 +7,25 @@ import {
   type Order,
   type OrderStatus,
   type SplitType,
+  type StaffUser,
 } from '../../shared/schemas';
-import { type PlaceOrderInput, placeOrderSchema } from '../../shared/validation';
+import { type PlaceOrderInput, type PosOrderInput, placeOrderSchema, posOrderSchema } from '../../shared/validation';
 import type { DB } from '../db/client';
-import { billRequests, orderItems, orders } from '../db/schema';
+import { billRequests, orderItems, orders, staffUsers } from '../db/schema';
 import { badRequest, conflict, notFound, parse } from '../http';
-import { priceCart } from './pricing';
-import { verifyTableToken } from './tables';
+import { type PricedLine, priceCart } from './pricing';
+import { getTable, verifyTableToken } from './tables';
 
 type OrderRow = typeof orders.$inferSelect;
 type ItemRow = typeof orderItems.$inferSelect;
 
 const now = () => new Date().toISOString();
 
-function toOrder(row: OrderRow, items: ItemRow[]): Order {
-  const { paymentRef: _ref, completedAt: _completed, ...rest } = row;
+function toOrder(row: OrderRow, items: ItemRow[], staffName: string | null): Order {
+  const { paymentRef: _ref, completedAt: _completed, staffId: _staffId, ...rest } = row;
   return {
     ...rest,
+    staffName,
     items: items.map(({ orderId: _orderId, ...i }) => i),
   };
 }
@@ -40,10 +42,15 @@ function hydrate(db: DB, rows: OrderRow[]): Order[] {
       ),
     )
     .all();
+  const staffIds = [...new Set(rows.map((r) => r.staffId).filter((id): id is string => !!id))];
+  const staff = staffIds.length
+    ? db.select({ id: staffUsers.id, name: staffUsers.name }).from(staffUsers).where(inArray(staffUsers.id, staffIds)).all()
+    : [];
   return rows.map((r) =>
     toOrder(
       r,
       items.filter((i) => i.orderId === r.id),
+      staff.find((s) => s.id === r.staffId)?.name ?? null,
     ),
   );
 }
@@ -54,13 +61,13 @@ export function getOrder(db: DB, id: string): Order {
   return hydrate(db, [row])[0];
 }
 
-/** Staff view: everything open plus anything closed in the last `sinceHours`. */
+/** Staff view: everything open (held tickets too) plus anything closed in the last `sinceHours`. */
 export function listOrders(db: DB, { sinceHours = 12 } = {}): Order[] {
   const since = new Date(Date.now() - sinceHours * 3600_000).toISOString();
   const rows = db
     .select()
     .from(orders)
-    .where(or(inArray(orders.status, [...OPEN_STATUSES]), gte(orders.createdAt, since)))
+    .where(or(inArray(orders.status, [...OPEN_STATUSES, 'held']), gte(orders.createdAt, since)))
     .orderBy(desc(orders.createdAt))
     .all();
   return hydrate(db, rows);
@@ -108,6 +115,8 @@ export function placeOrder(db: DB, input: PlaceOrderInput, money?: { currency: s
       .values({
         id,
         number: nextOrderNumber(tx as unknown as DB),
+        type: 'dine_in',
+        source: 'qr',
         tableId: data.tableId,
         status: data.paymentMethod === 'card' ? 'awaiting_payment' : 'pending',
         notes: data.notes ?? null,
@@ -120,22 +129,104 @@ export function placeOrder(db: DB, input: PlaceOrderInput, money?: { currency: s
         createdAt: now(),
       })
       .run();
-    for (const line of lines) {
-      tx.insert(orderItems)
+    insertItems(tx as unknown as DB, id, lines);
+  });
+  return getOrder(db, id);
+}
+
+function insertItems(db: DB, orderId: string, lines: PricedLine[]) {
+  for (const line of lines) {
+    db.insert(orderItems)
+      .values({
+        id: ulid(),
+        orderId,
+        menuItemId: line.item.id,
+        name: line.item.name,
+        unitPriceCents: line.item.priceCents,
+        quantity: line.quantity,
+        station: line.item.station,
+        note: line.note ?? null,
+      })
+      .run();
+  }
+}
+
+/**
+ * Rings up an order at the register. `hold` parks it (the kitchen never sees
+ * it); `send` fires it to the KDS. With `orderId`, a held ticket is updated
+ * in place so it keeps its number.
+ */
+export function savePosOrder(db: DB, input: PosOrderInput, staff: StaffUser): Order {
+  const data = parse(posOrderSchema, input);
+  const tableId = data.type === 'dine_in' ? getTable(db, data.tableId!).id : null;
+  const { lines, quote } = priceCart(db, { items: data.items });
+
+  if (data.orderId) {
+    const existing = getOrder(db, data.orderId);
+    if (existing.status !== 'held') throw conflict(`Order #${existing.number} has already been sent to the kitchen`);
+  }
+
+  const id = data.orderId ?? ulid();
+  const fields = {
+    type: data.type,
+    tableId,
+    customerName: data.type === 'takeaway' ? (data.customerName ?? null) : null,
+    status: (data.action === 'send' ? 'pending' : 'held') as OrderStatus,
+    notes: data.notes ?? null,
+    subtotalCents: quote.subtotalCents,
+    discountCents: 0,
+    totalCents: quote.subtotalCents,
+    staffId: staff.id,
+    // The kitchen clock starts when the ticket is sent, not when it was parked.
+    createdAt: now(),
+  };
+
+  db.transaction((tx) => {
+    if (data.orderId) {
+      tx.update(orders).set(fields).where(eq(orders.id, id)).run();
+      tx.delete(orderItems).where(eq(orderItems.orderId, id)).run();
+    } else {
+      tx.insert(orders)
         .values({
-          id: ulid(),
-          orderId: id,
-          menuItemId: line.item.id,
-          name: line.item.name,
-          unitPriceCents: line.item.priceCents,
-          quantity: line.quantity,
-          station: line.item.station,
-          note: line.note ?? null,
+          id,
+          number: nextOrderNumber(tx as unknown as DB),
+          source: 'pos',
+          paymentMethod: 'counter',
+          paymentStatus: 'unpaid',
+          ...fields,
         })
         .run();
     }
+    insertItems(tx as unknown as DB, id, lines);
   });
   return getOrder(db, id);
+}
+
+/** Throws away a parked ticket. It never reached the kitchen, so no approval is needed. */
+export function discardHeldOrder(db: DB, id: string): Order {
+  const order = getOrder(db, id);
+  if (order.status !== 'held') throw conflict('Only held tickets can be discarded — sent orders must be voided');
+  db.delete(orders).where(eq(orders.id, id)).run();
+  return { ...order, status: 'cancelled' };
+}
+
+/** Voids an order the kitchen has already received. Callers must have manager approval. */
+export function voidOrder(db: DB, id: string): Order {
+  const order = getOrder(db, id);
+  if (order.paymentStatus === 'paid') throw conflict(`Order #${order.number} is already paid — it needs a refund, not a void`);
+  if (!['pending', 'preparing', 'ready'].includes(order.status)) {
+    throw conflict(`Order #${order.number} can’t be voided once it’s ${order.status}`);
+  }
+  db.update(orders).set({ status: 'cancelled' }).where(eq(orders.id, id)).run();
+  return getOrder(db, id);
+}
+
+/** Takes payment for a takeaway order at the counter. Dine-in orders are settled per table. */
+export function payTakeawayOrder(db: DB, id: string): Order {
+  const order = getOrder(db, id);
+  if (order.type !== 'takeaway') throw conflict('Dine-in orders are paid when the table settles up');
+  if (order.status === 'held') throw conflict('Send the order to the kitchen before taking payment');
+  return markOrderPaid(db, id, 'counter');
 }
 
 const statusTimestamp: Partial<Record<OrderStatus, keyof OrderRow>> = {

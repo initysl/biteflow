@@ -86,6 +86,8 @@ test('table links without a valid token are read-only', async ({ page }) => {
 test('staff console requires sign-in', async ({ page }) => {
   await page.goto('/staff/kitchen');
   await expect(page).toHaveURL(/\/staff\/login/);
+  // Wait for the keypad to be ready before typing, or the keystrokes are lost.
+  await expect(page.getByRole('heading', { name: 'Staff sign in' })).toBeVisible();
   await page.keyboard.type('0000');
   await expect(page.getByText('That PIN didn’t match')).toBeVisible();
 });

@@ -24,8 +24,16 @@ export function createDb(url: string): { db: DB; sqlite: Database.Database } {
   if (url !== ':memory:') fs.mkdirSync(path.dirname(path.resolve(url)), { recursive: true });
   const sqlite = new Database(url);
   sqlite.pragma('journal_mode = WAL');
-  sqlite.pragma('foreign_keys = ON');
   const db = drizzle(sqlite, { schema });
+
+  // Migrations that rebuild a table (SQLite's only way to change a column) drop
+  // the old table. With foreign keys on, that drop cascades and deletes child
+  // rows (e.g. every order item). `PRAGMA foreign_keys` is ignored inside the
+  // migrator's transaction, so switch it off around the whole run instead.
+  sqlite.pragma('foreign_keys = OFF');
   migrate(db, { migrationsFolder: migrationsFolder() });
+  const broken = sqlite.pragma('foreign_key_check') as unknown[];
+  if (broken.length) throw new Error(`Migration left ${broken.length} broken foreign key reference(s)`);
+  sqlite.pragma('foreign_keys = ON');
   return { db, sqlite };
 }

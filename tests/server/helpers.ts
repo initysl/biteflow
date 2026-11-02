@@ -10,10 +10,15 @@ import { demoProvider } from '../../server/services/payments';
 import { getTable } from '../../server/services/tables';
 
 export const STAFF_PIN = '4321';
+export const MANAGER_PIN = '8765';
 
-export function makeTestApp() {
+/** `demo: true` mirrors the public portfolio setup: STAFF_PIN is a plain staff account and MANAGER_PIN owns the manager account. */
+export function makeTestApp({ demo = false } = {}) {
   const { db } = createDb(':memory:');
-  seedEssentials(db, { staffPin: STAFF_PIN });
+  seedEssentials(
+    db,
+    demo ? { staffPin: STAFF_PIN, managerPin: MANAGER_PIN, demoMode: true } : { staffPin: STAFF_PIN, demoMode: false },
+  );
 
   const events: { audience: string; event: ServerEvent }[] = [];
   const realtime: Broadcaster = {
@@ -32,9 +37,9 @@ export function makeTestApp() {
     return found;
   };
 
-  async function staffAgent() {
+  async function staffAgent(pin = STAFF_PIN) {
     const agent = request.agent(app);
-    await agent.post('/api/auth/login').send({ pin: STAFF_PIN }).expect(200);
+    await agent.post('/api/auth/login').send({ pin }).expect(200);
     return agent;
   }
 

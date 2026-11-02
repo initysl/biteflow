@@ -11,7 +11,7 @@ import { demoProvider, stripeProvider } from './services/payments';
 
 async function main() {
   const { db, sqlite } = createDb(config.databaseUrl);
-  seedEssentials(db, { staffPin: config.staffDemoPin });
+  seedEssentials(db, { staffPin: config.staffDemoPin, managerPin: config.managerPin, demoMode: config.demoMode });
   if (config.demoMode && isEmptyOfOrders(db)) seedDemoActivity(db);
 
   const server = http.createServer();
@@ -41,7 +41,8 @@ async function main() {
   server.listen(config.port, () => {
     console.log(`${config.restaurantName} running at ${config.appUrl}`);
     console.log(`  payments: ${payments.name}   demo mode: ${config.demoMode ? 'on' : 'off'}`);
-    if (config.demoMode) console.log(`  staff console: ${config.appUrl}/staff  (PIN ${config.staffDemoPin})`);
+    if (config.demoMode) console.log(`  staff console: ${config.appUrl}/staff  (demo PIN ${config.staffDemoPin})`);
+    console.log(`  manager approvals: ${config.managerPin ? 'enabled' : 'off — set MANAGER_PIN to approve voids and deletions'}`);
   });
 
   const shutdown = () => {

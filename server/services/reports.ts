@@ -15,7 +15,7 @@ export function summary(db: DB, from: Date = startOfToday()): ReportSummary {
   const todays = db
     .select()
     .from(orders)
-    .where(and(gte(orders.createdAt, since), ne(orders.status, 'cancelled'), ne(orders.status, 'awaiting_payment')))
+    .where(and(gte(orders.createdAt, since), ne(orders.status, 'cancelled'), ne(orders.status, 'awaiting_payment'), ne(orders.status, 'held')))
     .all();
   const paid = todays.filter((o) => o.paymentStatus === 'paid');
   const revenueCents = paid.reduce((s, o) => s + o.totalCents, 0);
