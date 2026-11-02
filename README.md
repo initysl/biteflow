@@ -1,7 +1,3 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
-
 # 🍽️ BiteFlow — Real-Time QR Bistro & Kitchen Automation Platform
 
 > **Transforming every smartphone into a smart table kiosk via instant QR scans with real-time kitchen orchestration, live order tracking, bill splitting, and waiter assistance.**
@@ -12,104 +8,116 @@
 
 **BiteFlow** is a modern, full-stack digital dining and kitchen management platform designed for restaurants, bistros, bars, and cafes. By eliminating app downloads, physical menus, and ordering bottlenecks, BiteFlow allows seated diners to scan a table-specific QR code, explore a rich visual menu, customize orders, track food progress live from the kitchen stations, call for assistance, and split or settle bills directly on their phones.
 
-Kitchen staff and floor managers get a synchronized, real-time Kitchen Display System (KDS) & Floor Console equipped with station routing (Grill, Starters, Desserts, Bar), Kanban order pipelines, table status monitoring, dynamic menu management, and instant waiter dispatch alerts.
+Kitchen staff and floor managers get a synchronized, real-time Kitchen Display System (KDS) and floor console with station routing (Grill, Pantry, Pastry, Bar), table status monitoring, dynamic menu management, and instant waiter alerts.
 
 ---
 
-## Key Features
+## Features
 
-### Customer Experience (Table Kiosk)
-- **Instant Table QR Onboarding**: Table context is automatically extracted from URL query parameters (`?table=3`), binding diners directly to their table.
-- **Interactive Gourmet Menu**: Filter by categories (*Starters*, *Mains*, *Desserts*, *Craft Drinks*), search keywords, and dietary tags (*Vegetarian*, *Vegan*, *Gluten-Free*, *Chef's Special*).
-- **Customizable Orders & Add-ons**: Add dietary notes, cooking preferences (e.g. steak temperature), and allergies.
-- **Live Kitchen Progress Tracker**: Real-time 5-stage visual progress pipeline (*Pending* ➔ *Acknowledged* ➔ *Preparing* ➔ *Ready to Serve* ➔ *Served/Paid*) powered by WebSockets.
-- **Station-by-Station Visibility**: Diners see exactly which station is preparing their meal (*Grill*, *Starters*, *Dessert*, *Bar*).
-- **Instant Digital Waiter Calling**: Dedicated button to request Water, Napkins, Cutlery, or a Server with live request confirmation.
-- **Flexible Bill Splitting**: Split bills evenly across diners, calculate per-person shares, or view itemized breakdowns.
-- **Payment Options**: Integrated Stripe Checkout Simulation (Cards, Apple Pay, Google Pay) and "Pay at Counter" options.
-- **Digital Folding Ticket**: Origami-inspired animated digital receipt with downloadable order summaries.
+**For guests** (`/t/:table`)
 
-### Staff & Kitchen Management Console
-- **Real-Time Kanban Pipeline**: Orders dynamically arrive and progress across stages (*Pending*, *Preparing*, *Ready*, *Served*, *Paid*) with zero page refreshes.
-- **Multi-Station Kitchen Routing**: Filter kitchen tickets by prep stations (*All*, *Grill Station*, *Starters & Salads*, *Dessert & Pastry*, *Bar & Cocktails*).
-- **Table & Floor Management**: Visual floor grid tracking status for all tables (*Vacant*, *Occupied*, *Billing*, *Assistance Needed*).
-- **Assistance Dispatch Queue**: Real-time notification badge alerting staff to pending guest requests with 1-click resolution.
-- **Dynamic Menu Manager (CRUD)**: Create new dishes, update pricing, toggle 86'd / in-stock status, and reassign prep stations on the fly.
-- **Live External API Seeding**: 1-click integration to fetch live dishes and craft cocktails from public culinary databases (*TheMealDB* & *TheCocktailDB*).
-- **Sales & Operations Analytics**: Live operational metrics including revenue, average preparation time, station velocity, and top-selling items.
+- Mobile-first menu with chef's picks, a sticky category bar with scroll-spy, and search
+- Dish details with dietary tags and allergen information entered by the restaurant (or a clear "ask staff" notice when there isn't any)
+- Cart with per-item notes, kitchen notes and server-validated promo codes
+- Pay up front by card (Stripe Checkout), or run a tab and request the bill, split evenly if needed
+- Live order tracker (received → preparing → ready → served) and printable receipts
+- Call staff for water, cutlery or a server, with live confirmation when it's handled
 
----
+**For staff** (`/staff`, PIN sign-in)
 
-## Getting Started
+- **Kitchen display**: New / Preparing / Ready columns, station filters (grill, pantry, pastry, bar), ticket timers that turn amber and red, and an audible chime for new tickets
+- **Floor**: one queue for help requests, bill requests and plates ready to run, plus a live table map with open tabs
+- **Menu**: add and edit dishes, toggle sold-out instantly, manage dietary and allergen data
+- **Tables & QR codes**: per-table codes generated locally, PNG download, printable table tents, and code rotation to revoke a leaked link
+- **Reports**: today's revenue, orders, average order value, time to ready, best sellers and orders by hour
 
-### Prerequisites
-- **Node.js**: v18.0.0 or higher
-- **npm** or **bun** / **yarn** / **pnpm**
+Light and dark themes, keyboard and screen-reader friendly, and respectful of `prefers-reduced-motion`.
 
-### 1. Installation
-Clone the repository and install dependencies:
+## Quick start
+
 ```bash
-git clone https://github.com/your-username/biteflow.git
-cd biteflow
 npm install
-```
-
-### 2. Environment Configuration
-Copy the example environment file:
-```bash
-cp .env.example .env
-```
-
-Default configuration in `.env`:
-```env
-# Server Port (Defaults to 3000)
-PORT=3000
-
-```
-
-### 3. Running in Development
-Start the full-stack development server (Express + Vite Middleware with TypeScript execution via `tsx`):
-```bash
 npm run dev
 ```
-Open your browser and visit: **`http://localhost:3000`**
 
-To simulate a seated guest at a specific table, add the query parameter:
-- **Table 1**: `http://localhost:3000/?table=1`
-- **Table 3**: `http://localhost:3000/?table=3`
+Open http://localhost:3000 and choose **Try a demo table**. Open http://localhost:3000/staff in another window (demo PIN `1234`) to watch orders arrive live.
 
----
+Development runs with demo mode on: the database is seeded with a sample menu, eight tables and a few orders in progress. **Reset demo data** in the staff sidebar restores it at any time.
 
-## WebSocket Event Protocol
+## How it works
 
-BiteFlow communicates in real time over WebSockets on `ws://<host>:<port>`:
+```
+shared/        Types, constants and zod validators used by both sides
+server/
+  index.ts     HTTP server, Vite middleware (dev) or static files (prod)
+  app.ts       Express app: security headers, routes, error handling
+  realtime.ts  WebSocket hub on /ws with "staff" and per-table rooms
+  auth.ts      PIN login, hashed expiring sessions in an httpOnly cookie
+  db/          Drizzle schema, generated migrations, seed data
+  services/    Pricing, order lifecycle, tables, assistance, reports, payments
+  routes/      Public (diner), auth and staff routers
+src/
+  app/         Router and providers
+  lib/         API client, realtime client, React Query hooks
+  ui/          Design-system primitives (buttons, sheets, forms…)
+  features/    diner/ and staff/ screens (staff is a separate lazy-loaded chunk)
+```
 
-| Event Type | Direction | Payload Description |
-|---|---|---|
-| `register` | Client ➔ Server | Registers connection role (`{ role: 'staff' }` or `{ role: 'table', tableId: '3' }`) |
-| `order:new` | Server ➔ Staff | Dispatched when a diner places a new order |
-| `order:placed` | Server ➔ Table | Order confirmation sent to the specific table client |
-| `order:update` | Server ➔ Both | Order status change (*pending*, *preparing*, *ready*, *served*, *paid*) |
-| `assistance:update` | Server ➔ Staff | Updates active waiter assistance requests queue |
-| `assistance:resolved`| Server ➔ Table | Notifies the table that their assistance request was handled |
-| `menu:update` | Server ➔ Both | Real-time broadcast when menu items or stock levels change |
-| `tables:update` | Server ➔ Staff | Real-time floor plan updates (*vacant*, *occupied*, *billing*) |
+Key design decisions:
 
----
+- **The server prices every order.** Clients send item IDs and quantities only; prices, discounts and totals come from the database.
+- **Table QR codes carry a secret token.** Diners can browse without one, but ordering, calling staff and requesting the bill all require it. Staff can rotate a table's token from the Tables screen.
+- **Order lifecycle** is enforced server-side: `awaiting_payment → pending → preparing → ready → served → completed` (or `cancelled`). Card orders only reach the kitchen once paid, and an order completes when it's both served and paid.
+- **Table status is derived** from open orders and bill requests, never set by hand, so it can't drift.
+- **Realtime updates feed React Query.** The server pushes small events; the client updates or refetches the affected queries, and refetches everything after a reconnect.
+- **Money is integer cents** end to end.
 
-## Testing the Live Flow
+## Configuration
 
-1. Open two browser windows side-by-side (or one regular window and one incognito window).
-2. **Window 1 (Customer)**: Visit `http://localhost:3000/?table=2`. Add items to your bag, add order notes, and click **Place Order**.
-3. **Window 2 (Staff Console)**: Switch role to **Staff Console**. Observe the new ticket arrive instantaneously in the **Pending** column with station routing tags.
-4. Advance the ticket to **Preparing** and **Ready**.
-5. Watch **Window 1** instantly animate the progress meter to reflect the kitchen state in real time.
-6. Click **Call Waiter** or **Request Water** in the customer window and observe the alert badge flash on the staff console.
+Copy `.env.example` to `.env`. Everything is optional in development.
+
+| Variable                                | Default                           | Purpose                                                                              |
+| --------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------ |
+| `APP_URL`                               | `http://localhost:3000`           | Public URL, used in QR codes and Stripe redirects                                    |
+| `DATABASE_URL`                          | `./data/biteflow.db`              | SQLite file, created and migrated on start                                           |
+| `RESTAURANT_NAME`, `CURRENCY`, `LOCALE` | `BiteFlow Bistro`, `USD`, `en-US` | Branding and money formatting                                                        |
+| `DEMO_MODE`                             | on in dev, off in prod            | Seeds sample activity and shows demo helpers                                         |
+| `STAFF_DEMO_PIN`                        | `1234`                            | 4-digit PIN for the first staff account (applied when the database is first created) |
+| `STRIPE_SECRET_KEY`                     | none                              | Enables real Stripe Checkout. Without it, card payments use a labelled demo flow     |
+| `STRIPE_WEBHOOK_SECRET`                 | none                              | Verifies `POST /api/payments/stripe/webhook`                                         |
+
+To test Stripe locally, use a test-mode key and `stripe listen --forward-to localhost:3000/api/payments/stripe/webhook`. Payments are also confirmed when the guest returns from Checkout, so the webhook is optional in development.
+
+## Scripts
+
+| Command                                                 | What it does                                                             |
+| ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `npm run dev`                                           | Dev server with hot reload                                               |
+| `npm run build`                                         | Build the client to `dist/client` and bundle the server to `dist/server` |
+| `npm start`                                             | Run the production build                                                 |
+| `npm test`                                              | API and unit tests (Vitest + Supertest, in-memory SQLite)                |
+| `npm run test:e2e`                                      | Playwright: a diner and a staff browser through the full service loop    |
+| `npm run typecheck` / `npm run lint` / `npm run format` | Static checks                                                            |
+| `npm run db:generate`                                   | Generate a migration after changing `server/db/schema.ts`                |
+
+## Deploying
+
+```bash
+docker build -t biteflow .
+docker run -p 3000:3000 -v biteflow-data:/data \
+  -e APP_URL=https://order.example.com -e STAFF_DEMO_PIN=4826 biteflow
+```
+
+The app is a single Node process with SQLite, so one small instance with a persistent volume is enough for a restaurant. Run it behind HTTPS: session cookies are `Secure` in production.
+
+## Notes
+
+- Sample allergen data is illustrative. A real restaurant must enter and verify its own.
+- Sample dishes imported from TheMealDB and TheCocktailDB have no allergen data, and are flagged as such for staff and guests.
+- Not yet built: multiple staff accounts and roles, customer accounts and loyalty, per-guest online bill splitting, and printer integration for kitchen tickets.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License** 
-
----
+This project is licensed under the **MIT License**.

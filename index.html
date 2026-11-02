@@ -2,42 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BiteFlow - A Dynamic Bistro Ordering System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>BiteFlow — QR table ordering for restaurants</title>
     <meta
       name="description"
-      content="BiteFlow is a QR-based restaurant ordering system. Customers scan a table QR code to browse the menu and order in real time, with orders routed instantly to kitchen and waiter dashboards."
+      content="Guests scan a table QR code to order and pay from their phone. Orders reach the kitchen display instantly and staff manage tables, menu and bills in one console."
     />
-    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#faf6ef" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/svg+xml" href="/bitflow.svg" />
+    <link rel="apple-touch-icon" href="/bitflow.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
 
-    <!-- Favicon (tab image) -->
-    <link rel="icon" type="image/svg" href="/public/bitflow.svg" />
-
-    <!-- Open Graph (social media preview) -->
-    <meta
-      property="og:title"
-      content="BiteFlow - QR Code Restaurant Ordering System"
-    />
-    <meta
-      property="og:description"
-      content="Scan, order, and serve — real-time QR-based restaurant ordering for modern bistros."
-    />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/public/og-image.jpg" />
-
-    <!-- Twitter Card -->
+    <meta property="og:title" content="BiteFlow — QR table ordering for restaurants" />
+    <meta property="og:description" content="Scan, order and pay from the table. Orders reach the kitchen the same second." />
+    <meta property="og:image" content="/og-image.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta
-      name="twitter:title"
-      content="BiteFlow - QR Code Restaurant Ordering System"
-    />
-    <meta
-      name="twitter:description"
-      content="Scan, order, and serve — real-time QR-based restaurant ordering for modern bistros."
-    />
+    <meta name="twitter:title" content="BiteFlow — QR table ordering for restaurants" />
+    <meta name="twitter:description" content="Scan, order and pay from the table. Orders reach the kitchen the same second." />
     <meta name="twitter:image" content="/og-image.jpg" />
   </head>
   <body>
+    <noscript>BiteFlow needs JavaScript to take your order.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
