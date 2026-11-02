@@ -287,7 +287,6 @@ export function TablesPage() {
   return (
     <div>
       <PageHeader
-        section='Back office'
         title='Tables & QR codes'
         description='Each table has its own code. Print them as table tents or download for your designer.'
         actions={
@@ -302,7 +301,7 @@ export function TablesPage() {
         }
       />
 
-      <div className='grid gap-4 px-4 pb-10 sm:grid-cols-2 sm:px-8 lg:grid-cols-3 2xl:grid-cols-4'>
+      <div className='grid gap-4 px-4 pb-10 sm:grid-cols-2 sm:px-6 lg:px-8 @3xl:grid-cols-3 @6xl:grid-cols-4'>
         {isLoading
           ? Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className='h-80' />)
           : tables?.map((t) => (

@@ -123,7 +123,6 @@ export function MenuAdminPage() {
   return (
     <div>
       <PageHeader
-        section='Back office'
         title='Menu'
         description={menu ? `${menu.length} items${soldOut ? ` · ${soldOut} sold out` : ''}` : undefined}
         actions={
@@ -140,7 +139,7 @@ export function MenuAdminPage() {
         }
       />
 
-      <div className='space-y-5 px-4 pb-10 sm:px-8'>
+      <div className='space-y-5 px-4 pb-10 sm:px-6 lg:px-8'>
         {missingAllergens > 0 && (
           <div className='flex items-start gap-3 rounded-2xl bg-warning-soft p-4 text-sm font-medium text-warning'>
             <AlertTriangle className='mt-0.5 size-4 shrink-0' />
@@ -154,7 +153,7 @@ export function MenuAdminPage() {
         <div className='flex flex-wrap items-start gap-5'>
           <section
             aria-label='Menu items'
-            className='flex min-w-0 flex-[999_1_560px] flex-col gap-4 rounded-[28px] bg-surface p-4 shadow-card sm:p-5'
+            className='@container flex min-w-0 flex-[999_1_560px] flex-col gap-4 rounded-[28px] bg-surface p-4 shadow-card sm:p-5'
           >
             <div className='flex flex-wrap items-center gap-3'>
               <SearchField
@@ -178,7 +177,7 @@ export function MenuAdminPage() {
             </div>
 
             {isLoading ? (
-              <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-4'>
+              <div className='grid grid-cols-2 gap-3 @lg:grid-cols-3 @4xl:grid-cols-4'>
                 {Array.from({ length: 8 }, (_, i) => (
                   <Skeleton key={i} className='h-60' />
                 ))}
@@ -191,7 +190,7 @@ export function MenuAdminPage() {
                 {q || category !== 'all' ? 'Try a different search or category.' : 'Add your first dish to get started.'}
               </EmptyState>
             ) : (
-              <ul className='grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-4'>
+              <ul className='grid grid-cols-2 gap-3 @lg:grid-cols-3 @4xl:grid-cols-4'>
                 {items.map((m) => (
                   <ItemCard key={m.id} item={m} selected={wide && selected?.id === m.id} onSelect={() => open(m)} />
                 ))}
@@ -202,7 +201,7 @@ export function MenuAdminPage() {
           {wide && (
             <aside
               aria-label='Item editor'
-              className='sticky top-8 max-h-[calc(100dvh-4rem)] flex-[1_1_360px] overflow-y-auto overscroll-contain rounded-[28px] bg-surface p-5 shadow-card'
+              className='sticky top-20 max-h-[calc(100dvh-6rem)] flex-[1_1_360px] overflow-y-auto overscroll-contain rounded-[28px] bg-surface p-5 shadow-card'
             >
               {selected ? (
                 <MenuItemPanel key={selected.id} item={selected} onClose={() => setSelectedId(null)} />

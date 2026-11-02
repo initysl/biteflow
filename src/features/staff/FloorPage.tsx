@@ -225,22 +225,23 @@ export function FloorPage() {
 
   const select = (id: string) => {
     setSelectedId(id);
-    if (window.matchMedia('(max-width: 1279px)').matches)
-      panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // When the panel sits below the grid (narrow screens), bring it into view.
+    const top = panelRef.current?.getBoundingClientRect().top ?? 0;
+    if (top > window.innerHeight * 0.6) panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
     <div>
-      <PageHeader section='Service' title='Floor' description='Who needs what, right now.' />
+      <PageHeader title='Floor' description='Who needs what, right now.' />
 
-      <div className='flex flex-wrap items-start gap-6 px-4 pb-10 sm:px-8'>
-        <div className='flex min-w-0 flex-[999_1_560px] flex-col gap-6'>
+      <div className='flex flex-wrap items-start gap-6 px-4 pb-10 sm:px-6 lg:px-8'>
+        <div className='@container flex min-w-0 flex-[999_1_560px] flex-col gap-6'>
           <section aria-labelledby='attention-heading'>
             <h2 id='attention-heading' className='mb-3 text-[13px] font-extrabold tracking-[0.06em] text-ink-muted uppercase'>
               Needs attention {attention > 0 && <span className='tabular text-accent-text'>· {attention}</span>}
             </h2>
             {loading ? (
-              <div className='grid gap-3 sm:grid-cols-2 2xl:grid-cols-3'>
+              <div className='grid gap-3 @3xl:grid-cols-2 @6xl:grid-cols-3'>
                 <Skeleton className='h-[72px]' />
                 <Skeleton className='h-[72px]' />
               </div>
@@ -252,7 +253,7 @@ export function FloorPage() {
                 All caught up. Help requests, bills and ready plates will show up here.
               </div>
             ) : (
-              <ul className='grid gap-3 sm:grid-cols-2 2xl:grid-cols-3'>
+              <ul className='grid gap-3 @3xl:grid-cols-2 @6xl:grid-cols-3'>
                 {requests.map((r) => (
                   <AttentionCard
                     key={r.id}
@@ -339,13 +340,13 @@ export function FloorPage() {
               </div>
             </div>
             {tables.isLoading ? (
-              <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-4'>
+              <div className='grid grid-cols-2 gap-3 @lg:grid-cols-3 @4xl:grid-cols-4'>
                 {Array.from({ length: 8 }, (_, i) => (
                   <Skeleton key={i} className='h-32' />
                 ))}
               </div>
             ) : (
-              <ul className='grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-4'>
+              <ul className='grid grid-cols-2 gap-3 @lg:grid-cols-3 @4xl:grid-cols-4'>
                 {shown.map((t) => {
                   const pill = STATUS_PILL[t.status];
                   const help = requests.some((r) => r.tableId === t.id);
@@ -392,7 +393,7 @@ export function FloorPage() {
         <aside
           ref={panelRef}
           aria-label={selected ? `${selected.label} details` : 'Table details'}
-          className='w-full scroll-mt-20 rounded-[28px] bg-surface p-5 shadow-card xl:sticky xl:top-8 xl:max-h-[calc(100dvh-4rem)] xl:w-auto xl:overflow-y-auto xl:overscroll-contain xl:flex-[1_1_360px]'
+          className='w-full scroll-mt-20 rounded-[28px] bg-surface p-5 shadow-card @5xl:sticky @5xl:top-20 @5xl:max-h-[calc(100dvh-6rem)] @5xl:w-auto @5xl:flex-[1_1_340px] @5xl:overflow-y-auto @5xl:overscroll-contain'
         >
           <TablePanel
             table={selected}

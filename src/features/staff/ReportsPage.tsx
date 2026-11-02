@@ -42,21 +42,17 @@ export function ReportsPage() {
 
   return (
     <div>
-      <PageHeader
-        section='Back office'
-        title='Reports'
-        description='Live numbers for today’s service. Revenue counts paid orders only.'
-      />
-      <div className='space-y-6 px-4 pb-10 sm:px-8'>
+      <PageHeader title='Reports' description='Live numbers for today’s service. Revenue counts paid orders only.' />
+      <div className='space-y-6 px-4 pb-10 sm:px-6 lg:px-8'>
         {isLoading || !data ? (
-          <div className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
+          <div className='grid grid-cols-2 gap-4 @4xl:grid-cols-4'>
             {Array.from({ length: 4 }, (_, i) => (
               <Skeleton key={i} className='h-32' />
             ))}
           </div>
         ) : (
           <>
-            <div className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
+            <div className='grid grid-cols-2 gap-4 @4xl:grid-cols-4'>
               <Stat
                 label='Revenue'
                 value={money(data.revenueCents)}
@@ -78,7 +74,7 @@ export function ReportsPage() {
                 </EmptyState>
               </Card>
             ) : (
-              <div className='grid gap-4 xl:grid-cols-2'>
+              <div className='grid gap-4 @5xl:grid-cols-2'>
                 <Card className='p-5'>
                   <h2 className='font-display text-lg font-bold'>Orders by hour</h2>
                   <div className='mt-4 h-64' aria-hidden>

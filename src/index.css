@@ -1,4 +1,17 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* `dark:` follows our theme switch: an explicit choice, else the OS setting. */
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
+}
 
 /*
  * Design tokens. Components use the semantic names (bg-canvas, text-ink-muted…)
@@ -146,6 +159,32 @@
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --color-overlay: var(--overlay);
+
+  /* shadcn/ui tokens, mapped onto the BiteFlow palette. */
+  --color-background: var(--canvas);
+  --color-foreground: var(--ink);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--on-accent);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--ink-muted);
+  --color-destructive: var(--danger);
+  --color-border: var(--line);
+  --color-input: var(--line-strong);
+  --color-ring: var(--accent);
+  --color-sidebar: var(--surface);
+  --color-sidebar-foreground: var(--ink-muted);
+  --color-sidebar-primary: var(--accent);
+  --color-sidebar-primary-foreground: var(--on-accent);
+  --color-sidebar-accent: var(--surface-2);
+  --color-sidebar-accent-foreground: var(--ink);
+  --color-sidebar-border: var(--line);
+  --color-sidebar-ring: var(--accent);
 
   --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-display: 'Bricolage Grotesque Variable', 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;

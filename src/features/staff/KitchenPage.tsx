@@ -169,7 +169,6 @@ export function KitchenPage() {
   return (
     <div className='flex min-h-dvh flex-col'>
       <PageHeader
-        section='Service'
         title='Kitchen'
         description='Oldest tickets first. Timers turn amber at 12 minutes and red at 20.'
         actions={
@@ -187,7 +186,7 @@ export function KitchenPage() {
       />
 
       {/* Column switcher on phones */}
-      <div className='grid grid-cols-3 gap-1.5 px-4 pb-4 lg:hidden'>
+      <div className='grid grid-cols-3 gap-1.5 px-4 pb-4 @4xl:hidden'>
         {KITCHEN_STATUSES.map((s) => (
           <button
             key={s}
@@ -205,18 +204,18 @@ export function KitchenPage() {
       </div>
 
       {isLoading ? (
-        <div className='grid gap-5 px-4 sm:px-8 lg:grid-cols-3'>
+        <div className='grid gap-5 px-4 sm:px-6 lg:px-8 @4xl:grid-cols-3'>
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} className='h-80 rounded-[28px]' />
           ))}
         </div>
       ) : (
-        <div className='grid flex-1 gap-5 px-4 pb-8 sm:px-8 lg:grid-cols-3'>
+        <div className='grid flex-1 gap-5 px-4 pb-8 sm:px-6 lg:px-8 @4xl:grid-cols-3'>
           {KITCHEN_STATUSES.map((s) => (
             <section
               key={s}
               aria-labelledby={`col-${s}`}
-              className={cn('min-w-0 rounded-[28px] bg-surface-3/60 p-3', mobileColumn !== s && 'hidden lg:block')}
+              className={cn('min-w-0 rounded-[28px] bg-surface-3/60 p-3', mobileColumn !== s && 'hidden @4xl:block')}
             >
               <h2
                 id={`col-${s}`}

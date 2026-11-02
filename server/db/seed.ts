@@ -42,7 +42,7 @@ export const SAMPLE_MENU: MenuItemInput[] = [
     priceCents: 1200,
     category: 'starters',
     station: 'grill',
-    imageUrl: img('1599487488170-d11ec9c172f0'),
+    imageUrl: img('1555939594-58d7cb561ad1'),
     dietary: ['spicy', 'gluten-free'],
     allergens: ['milk'],
   },
