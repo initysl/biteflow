@@ -439,3 +439,18 @@
     display: grid;
   }
 }
+
+/* Kitchen order ticket (KOT): only exists while printing, sized for 80mm thermal printers. */
+#kot-sheet {
+  display: none;
+}
+@media print {
+  body:has(#kot-sheet) > *:not(#kot-sheet) {
+    display: none !important;
+  }
+  #kot-sheet {
+    display: block;
+    width: 72mm;
+    margin: 0 auto;
+  }
+}

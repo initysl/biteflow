@@ -3,6 +3,7 @@ import type { OrderStatus } from '@shared/schemas';
 type Tone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info';
 
 export const ORDER_STATUS_META: Record<OrderStatus, { label: string; tone: Tone; diner: string }> = {
+  held: { label: 'Held', tone: 'neutral', diner: 'This order hasn’t been sent to the kitchen yet.' },
   awaiting_payment: { label: 'Awaiting payment', tone: 'warning', diner: 'Complete payment to send this order to the kitchen.' },
   pending: { label: 'New', tone: 'accent', diner: 'Sent to the kitchen. A chef will pick it up shortly.' },
   preparing: { label: 'Preparing', tone: 'warning', diner: 'The kitchen is cooking your order.' },

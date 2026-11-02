@@ -1,6 +1,4 @@
-import bcrypt from 'bcryptjs';
 import { sql } from 'drizzle-orm';
-import { ulid } from 'ulid';
 import type { MenuItemInput } from '../../shared/validation';
 import type { DB } from './client';
 import {
@@ -11,12 +9,12 @@ import {
   orders,
   promoCodes,
   restaurantTables,
-  staffUsers,
 } from './schema';
 import { listMenu, replaceMenu } from '../services/menu';
 import { getTable, newTableToken } from '../services/tables';
 import { markOrderPaid, placeOrder, requestBill, transitionOrder } from '../services/orders';
 import { requestAssistance } from '../services/assistance';
+import { syncStaffAccounts } from '../services/staff';
 
 const img = (id: string) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&q=75&w=800`;
 
@@ -203,7 +201,7 @@ const SAMPLE_TABLES = [
   { id: '8', seats: 8 },
 ];
 
-export function seedEssentials(db: DB, opts: { staffPin: string }) {
+export function seedEssentials(db: DB, opts: { staffPin: string; managerPin?: string; demoMode: boolean }) {
   const hasMenu =
     db
       .select({ n: sql<number>`count(*)` })
@@ -233,16 +231,7 @@ export function seedEssentials(db: DB, opts: { staffPin: string }) {
     .onConflictDoNothing()
     .run();
 
-  const hasStaff =
-    db
-      .select({ n: sql<number>`count(*)` })
-      .from(staffUsers)
-      .get()!.n > 0;
-  if (!hasStaff) {
-    db.insert(staffUsers)
-      .values({ id: ulid(), name: 'Manager', pinHash: bcrypt.hashSync(opts.staffPin, 10) })
-      .run();
-  }
+  syncStaffAccounts(db, opts);
 }
 
 /** Puts a handful of orders across the pipeline so the staff console looks alive. */

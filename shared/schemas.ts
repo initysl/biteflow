@@ -71,15 +71,34 @@ export const ALLERGEN_LABELS: Record<Allergen, string> = {
  * kitchen once paid; pay-at-table orders start in `pending`.
  * `completed` is reached automatically once an order is both served and paid.
  */
-export const ORDER_STATUSES = ['awaiting_payment', 'pending', 'preparing', 'ready', 'served', 'completed', 'cancelled'] as const;
+export const ORDER_STATUSES = [
+  'held',
+  'awaiting_payment',
+  'pending',
+  'preparing',
+  'ready',
+  'served',
+  'completed',
+  'cancelled',
+] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
-/** Statuses staff can move an order to by hand, keyed by current status. */
+/**
+ * Statuses staff can move an order to by hand, keyed by current status.
+ * Cancelling (voiding) a sent order is separate: it needs manager approval.
+ */
 export const STAFF_TRANSITIONS: Partial<Record<OrderStatus, OrderStatus[]>> = {
-  pending: ['preparing', 'cancelled'],
+  pending: ['preparing'],
   preparing: ['ready', 'pending'],
   ready: ['served', 'preparing'],
 };
+
+/** Dine-in orders belong to a table; takeaway orders don't. */
+export const ORDER_TYPES = ['dine_in', 'takeaway'] as const;
+export type OrderType = (typeof ORDER_TYPES)[number];
+
+/** Where an order was entered: a guest's phone (QR) or the staff register (POS). */
+export type OrderSource = 'qr' | 'pos';
 
 export const KITCHEN_STATUSES = ['pending', 'preparing', 'ready'] as const satisfies readonly OrderStatus[];
 export const OPEN_STATUSES: readonly OrderStatus[] = ['awaiting_payment', 'pending', 'preparing', 'ready', 'served'];
@@ -135,7 +154,13 @@ export interface OrderItem {
 export interface Order {
   id: string;
   number: number;
-  tableId: string;
+  type: OrderType;
+  source: OrderSource;
+  /** `null` for takeaway. */
+  tableId: string | null;
+  customerName: string | null;
+  /** The staff member who rang it up at the register. */
+  staffName: string | null;
   status: OrderStatus;
   notes: string | null;
   items: OrderItem[];
@@ -205,9 +230,12 @@ export interface AppConfig {
   promo: { code: string; label: string } | null;
 }
 
+export type StaffRole = 'manager' | 'staff';
+
 export interface StaffUser {
   id: string;
   name: string;
+  role: StaffRole;
 }
 
 export interface ReportSummary {

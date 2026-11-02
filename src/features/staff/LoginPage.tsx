@@ -18,7 +18,7 @@ export function LoginPage() {
   const location = useLocation();
   const qc = useQueryClient();
   const { data: config } = useConfig();
-  const from = (location.state as { from?: string } | null)?.from ?? '/staff/kitchen';
+  const from = (location.state as { from?: string } | null)?.from ?? '/staff/register';
 
   const login = useMutation({
     mutationFn: (value: string) => api<StaffUser>('/auth/login', { method: 'POST', body: { pin: value } }),
@@ -36,12 +36,16 @@ export function LoginPage() {
     if (login.isPending) return;
     if (key === 'del') return setPin((p) => p.slice(0, -1));
     if (!key) return;
-    setPin((p) => {
-      const next = (p + key).slice(0, PIN_LENGTH);
-      if (next.length === PIN_LENGTH) login.mutate(next);
-      return next;
-    });
+    setPin((p) => (p + key).slice(0, PIN_LENGTH));
   };
+
+  // Submit once the last digit lands. This lives in an effect, not the state
+  // updater above, because React may run updaters twice (StrictMode) and each
+  // run would send a login attempt — burning through the rate limit.
+  const { mutate, isPending } = login;
+  useEffect(() => {
+    if (pin.length === PIN_LENGTH && !isPending) mutate(pin);
+  }, [pin, isPending, mutate]);
 
   // Physical keyboards and number pads work too.
   useEffect(() => {

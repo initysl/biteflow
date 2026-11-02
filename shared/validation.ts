@@ -5,6 +5,7 @@ import {
   CATEGORIES,
   DIETARY,
   ORDER_STATUSES,
+  ORDER_TYPES,
   PAYMENT_METHODS,
   SPLIT_TYPES,
   STATIONS,
@@ -49,6 +50,23 @@ export const placeOrderSchema = quoteInputSchema.extend({
   paymentMethod: z.enum(PAYMENT_METHODS),
 });
 export type PlaceOrderInput = z.input<typeof placeOrderSchema>;
+
+/**
+ * An order rung up at the register. `hold` parks it without telling the
+ * kitchen; `send` fires it to the KDS. Passing `orderId` updates a held order.
+ */
+export const posOrderSchema = z
+  .object({
+    orderId: z.string().min(1).max(64).optional(),
+    type: z.enum(ORDER_TYPES),
+    tableId: tableIdSchema.optional(),
+    customerName: trimmedOptional(40),
+    items: z.array(cartLineSchema).min(1, 'Add at least one item').max(50),
+    notes: trimmedOptional(280),
+    action: z.enum(['hold', 'send']),
+  })
+  .refine((o) => o.type !== 'dine_in' || !!o.tableId, { message: 'Pick a table for dine-in orders', path: ['tableId'] });
+export type PosOrderInput = z.input<typeof posOrderSchema>;
 
 export const menuItemInputSchema = z.object({
   name: z.string().trim().min(2).max(80),

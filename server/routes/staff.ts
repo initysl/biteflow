@@ -1,13 +1,22 @@
 import { Router } from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { menuItemInputSchema, orderStatusUpdateSchema } from '../../shared/validation';
-import { requireStaff } from '../auth';
+import { requireManager, requireStaff } from '../auth';
 import { type AppContext, emitAssistance, emitMenu, emitOrder, emitTables } from '../context';
 import { resetDemo } from '../db/seed';
 import { HttpError, asyncHandler, parse } from '../http';
 import { listActiveAssistance, resolveAssistance } from '../services/assistance';
 import { createMenuItem, deleteMenuItem, replaceMenu, updateMenuItem } from '../services/menu';
 import { fetchSampleMenu } from '../services/menuImport';
-import { listOrders, settleTable, transitionOrder } from '../services/orders';
+import {
+  discardHeldOrder,
+  listOrders,
+  payTakeawayOrder,
+  savePosOrder,
+  settleTable,
+  transitionOrder,
+  voidOrder,
+} from '../services/orders';
 import { summary } from '../services/reports';
 import { createTable, deleteTable, listTables, rotateTableToken, updateTable } from '../services/tables';
 
@@ -17,6 +26,20 @@ export function staffRoutes(ctx: AppContext): Router {
   const r = Router();
   r.use(requireStaff(db));
 
+  // Voids and destructive changes need a manager. Failed PIN attempts are
+  // rate-limited so a 4-digit manager PIN can't be guessed.
+  const managerOnly = [
+    rateLimit({
+      windowMs: 15 * 60_000,
+      limit: config.isTest ? 1000 : 10,
+      skipSuccessfulRequests: true,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      message: { error: 'Too many manager PIN attempts. Try again in a few minutes.' },
+    }),
+    requireManager(db),
+  ];
+
   // Orders --------------------------------------------------------------------
   r.get('/orders', (_req, res) => {
     res.json(listOrders(db));
@@ -25,6 +48,31 @@ export function staffRoutes(ctx: AppContext): Router {
   r.patch('/orders/:id', (req, res) => {
     const { status } = parse(orderStatusUpdateSchema, req.body);
     const order = transitionOrder(db, req.params.id, status);
+    emitOrder(ctx, order);
+    res.json(order);
+  });
+
+  r.post('/orders/:id/void', ...managerOnly, (req, res) => {
+    const order = voidOrder(db, req.params.id);
+    emitOrder(ctx, order);
+    res.json(order);
+  });
+
+  r.post('/orders/:id/pay', (req, res) => {
+    const order = payTakeawayOrder(db, req.params.id);
+    emitOrder(ctx, order);
+    res.json(order);
+  });
+
+  // Register (POS) ------------------------------------------------------------
+  r.post('/pos/orders', (req, res) => {
+    const order = savePosOrder(db, req.body, req.staff!);
+    emitOrder(ctx, order);
+    res.status(201).json(order);
+  });
+
+  r.delete('/pos/orders/:id', (req, res) => {
+    const order = discardHeldOrder(db, req.params.id);
     emitOrder(ctx, order);
     res.json(order);
   });
@@ -46,13 +94,13 @@ export function staffRoutes(ctx: AppContext): Router {
     res.json(table);
   });
 
-  r.delete('/tables/:id', (req, res) => {
+  r.delete('/tables/:id', ...managerOnly, (req, res) => {
     deleteTable(db, req.params.id);
     emitTables(ctx);
     res.status(204).end();
   });
 
-  r.post('/tables/:id/rotate-token', (req, res) => {
+  r.post('/tables/:id/rotate-token', ...managerOnly, (req, res) => {
     res.json(rotateTableToken(db, req.params.id));
   });
 
@@ -87,7 +135,7 @@ export function staffRoutes(ctx: AppContext): Router {
     res.json(item);
   });
 
-  r.delete('/menu/:id', (req, res) => {
+  r.delete('/menu/:id', ...managerOnly, (req, res) => {
     deleteMenuItem(db, req.params.id);
     emitMenu(ctx);
     res.status(204).end();
@@ -95,6 +143,7 @@ export function staffRoutes(ctx: AppContext): Router {
 
   r.post(
     '/menu/import-sample',
+    ...managerOnly,
     asyncHandler(async (_req, res) => {
       const items = await fetchSampleMenu();
       if (items.length === 0) throw new HttpError(502, 'Couldn’t reach the sample menu service. Try again shortly.');
@@ -110,7 +159,7 @@ export function staffRoutes(ctx: AppContext): Router {
   });
 
   // Demo ----------------------------------------------------------------------
-  r.post('/demo/reset', (_req, res) => {
+  r.post('/demo/reset', ...managerOnly, (_req, res) => {
     if (!config.demoMode) throw new HttpError(404, 'Not found');
     resetDemo(db);
     emitMenu(ctx);

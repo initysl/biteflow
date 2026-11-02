@@ -4,6 +4,7 @@ import {
   Bell,
   BellOff,
   ChefHat,
+  Store,
   ChevronsUpDown,
   ExternalLink,
   LayoutGrid,
@@ -62,6 +63,7 @@ import { useTheme, type ThemePref } from '@/lib/theme';
 import { Button } from '@/ui/Button';
 import { Skeleton, StatusDot } from '@/ui/Display';
 import { Dialog } from '@/ui/Sheet';
+import { ManagerApprovalDialog, isApprovalCancelled, useManagerAction } from './managerApproval';
 
 const SOUND_KEY = 'bf:staff:sound';
 
@@ -114,6 +116,7 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
+  { to: 'register', label: 'Register', icon: Store, group: 'Service' },
   { to: 'kitchen', label: 'Kitchen', icon: ChefHat, group: 'Service' },
   { to: 'floor', label: 'Floor', icon: LayoutGrid, group: 'Service' },
   { to: 'menu', label: 'Menu', icon: UtensilsCrossed, group: 'Back office' },
@@ -172,7 +175,9 @@ function AccountMenu({
       <DropdownMenuContent className='w-60 rounded-2xl p-1.5' side={isMobile ? 'bottom' : 'right'} align='end' sideOffset={8}>
         <DropdownMenuLabel className='px-2 py-1.5'>
           <span className='block text-sm font-bold'>{user.name}</span>
-          <span className='block text-xs font-normal text-ink-muted'>{restaurant}</span>
+          <span className='block text-xs font-normal text-ink-muted'>
+            {restaurant} · {user.role === 'manager' ? 'Manager' : 'Staff'}
+          </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuCheckboxItem className='rounded-lg' checked={soundOn} onCheckedChange={(v) => setSoundOn(!!v)}>
@@ -224,7 +229,7 @@ function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size='lg' asChild className='rounded-xl hover:bg-transparent'>
-              <Link to='/staff/kitchen' onClick={closeOnMobile}>
+              <Link to='/staff/register' onClick={closeOnMobile}>
                 <span className='flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent text-on-accent'>
                   <UtensilsCrossed className='size-4' />
                 </span>
@@ -322,7 +327,15 @@ function AppSidebar({
   );
 }
 
-function TopBar({ soundOn, setSoundOn }: { soundOn: boolean; setSoundOn: (v: boolean) => void }) {
+function TopBar({
+  soundOn,
+  setSoundOn,
+  demoAccess,
+}: {
+  soundOn: boolean;
+  setSoundOn: (v: boolean) => void;
+  demoAccess: boolean;
+}) {
   const { pathname } = useLocation();
   const status = useConnectionStatus();
   const current = NAV.find((n) => pathname.startsWith(`/staff/${n.to}`));
@@ -345,6 +358,14 @@ function TopBar({ soundOn, setSoundOn }: { soundOn: boolean; setSoundOn: (v: boo
         </BreadcrumbList>
       </Breadcrumb>
       <div className='ml-auto flex items-center gap-1.5'>
+        {demoAccess && (
+          <span
+            title='Signed in with the public demo PIN. Voids and deletions need a manager, whose PIN is private.'
+            className='hidden rounded-full bg-highlight px-3 py-1.5 text-xs font-bold text-on-highlight sm:inline-flex'
+          >
+            Demo access
+          </span>
+        )}
         <span
           role='status'
           className={cn(
@@ -379,6 +400,8 @@ export function StaffLayout() {
   const qc = useQueryClient();
   const [soundOn, setSoundOn] = useSoundPref();
   const [resetOpen, setResetOpen] = useState(false);
+  const runAsManager = useManagerAction();
+  const { data: config } = useConfig();
   const signedIn = me.isSuccess;
   useRealtimeSubscription(signedIn ? { type: 'subscribe', room: 'staff' } : null);
   const announcement = useNewOrderAlerts(soundOn);
@@ -403,13 +426,16 @@ export function StaffLayout() {
     },
   });
   const reset = useMutation({
-    mutationFn: () => api('/staff/demo/reset', { method: 'POST' }),
+    mutationFn: () => runAsManager('Resetting demo data', (headers) => api('/staff/demo/reset', { method: 'POST', headers })),
     onSuccess: () => {
       qc.invalidateQueries();
       setResetOpen(false);
       toast.success('Demo data restored');
     },
-    onError: (err) => toast.error(errorMessage(err)),
+    onError: (err) => {
+      setResetOpen(false);
+      if (!isApprovalCancelled(err)) toast.error(errorMessage(err));
+    },
   });
 
   if (me.error instanceof ApiError && me.error.status === 401) {
@@ -446,8 +472,9 @@ export function StaffLayout() {
           onReset={() => setResetOpen(true)}
           onSignOut={() => logout.mutate()}
         />
-        <SidebarInset className='@container min-w-0 bg-canvas'>
-          <TopBar soundOn={soundOn} setSoundOn={setSoundOn} />
+        <ManagerApprovalDialog />
+        <SidebarInset className='@container/main min-w-0 bg-canvas'>
+          <TopBar soundOn={soundOn} setSoundOn={setSoundOn} demoAccess={!!config?.demoMode && me.data.role !== 'manager'} />
           <Outlet />
         </SidebarInset>
 

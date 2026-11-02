@@ -5,9 +5,12 @@ import type {
   AssistanceType,
   Category,
   Dietary,
+  OrderSource,
   OrderStatus,
+  OrderType,
   PaymentMethod,
   SplitType,
+  StaffRole,
   Station,
 } from '../../shared/schemas';
 
@@ -46,9 +49,12 @@ export const orders = sqliteTable(
   {
     id: text('id').primaryKey(),
     number: integer('number').notNull().unique(),
-    tableId: text('table_id')
-      .notNull()
-      .references(() => restaurantTables.id, { onDelete: 'cascade' }),
+    type: text('type').$type<OrderType>().notNull().default('dine_in'),
+    source: text('source').$type<OrderSource>().notNull().default('qr'),
+    /** Null for takeaway orders. */
+    tableId: text('table_id').references(() => restaurantTables.id, { onDelete: 'cascade' }),
+    customerName: text('customer_name'),
+    staffId: text('staff_id').references(() => staffUsers.id, { onDelete: 'set null' }),
     status: text('status').$type<OrderStatus>().notNull(),
     notes: text('notes'),
     subtotalCents: integer('subtotal_cents').notNull(),
@@ -121,6 +127,8 @@ export const staffUsers = sqliteTable('staff_users', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   pinHash: text('pin_hash').notNull(),
+  /** `staff` runs service; `manager` can also approve voids and destructive changes. */
+  role: text('role').$type<StaffRole>().notNull().default('manager'),
   createdAt: createdAt(),
 });
 

@@ -12,7 +12,8 @@ test('diner order flows through kitchen, floor and bill in real time', async ({ 
   await staff.goto('/staff/login');
   await expect(staff.getByRole('heading', { name: 'Staff sign in' })).toBeVisible();
   await staff.keyboard.type('1234');
-  await expect(staff).toHaveURL(/\/staff\/kitchen/);
+  await expect(staff).toHaveURL(/\/staff\/register/);
+  await staff.getByRole('link', { name: 'Kitchen' }).first().click();
 
   const dinerCtx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
   const diner = await dinerCtx.newPage();
@@ -86,6 +87,58 @@ test('table links without a valid token are read-only', async ({ page }) => {
 test('staff console requires sign-in', async ({ page }) => {
   await page.goto('/staff/kitchen');
   await expect(page).toHaveURL(/\/staff\/login/);
+  // Wait for the keypad to be ready before typing, or the keystrokes are lost.
+  await expect(page.getByRole('heading', { name: 'Staff sign in' })).toBeVisible();
   await page.keyboard.type('0000');
   await expect(page.getByText('That PIN didn’t match')).toBeVisible();
+});
+
+test('register: ring up a dine-in order, hold it, recall it and send it to the kitchen', async ({ browser, request }) => {
+  const { tableId, token } = await (await request.get('/api/demo/table')).json();
+
+  const staffCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const staff = await staffCtx.newPage();
+  await staff.goto('/staff/login');
+  await expect(staff.getByRole('heading', { name: 'Staff sign in' })).toBeVisible();
+  await staff.keyboard.type('1234');
+  await expect(staff.getByRole('heading', { name: 'Register' })).toBeVisible();
+  const ticket = staff.getByRole('complementary', { name: 'Ticket' });
+
+  // Ring it up and park it.
+  await staff.getByRole('button', { name: 'Add Wagyu Beef Burger' }).click();
+  await staff.getByRole('button', { name: 'Add Wagyu Beef Burger' }).click();
+  await staff.getByRole('button', { name: 'Add House Mint Lemonade' }).click();
+  await ticket.getByRole('combobox', { name: 'Table' }).selectOption(tableId);
+  await ticket.getByRole('button', { name: /Hold/ }).click();
+  await expect(staff.getByText(/Order #\d+ held/)).toBeVisible();
+  await expect(ticket.getByText('Empty ticket')).toBeVisible();
+
+  // Recall it, add an item and send it.
+  await staff.getByRole('button', { name: /^Held/ }).click();
+  await staff.getByRole('dialog').getByRole('button', { name: 'Recall' }).click();
+  await expect(ticket.getByRole('heading', { name: /Order #\d+/ })).toBeVisible();
+  const number = (await ticket.getByRole('heading', { name: /Order #\d+/ }).textContent())!.match(/\d+/)![0];
+  await staff.getByRole('button', { name: 'Add Classic Tiramisu' }).click();
+  await ticket.getByRole('button', { name: /Send to kitchen/ }).click();
+  await expect(staff.getByText(`Order #${number} sent to the kitchen`)).toBeVisible();
+
+  // The kitchen has it, marked as a register order…
+  await staff.getByRole('link', { name: 'Kitchen' }).first().click();
+  const kds = staff.getByRole('article', { name: `Order ${number}, table ${tableId}` });
+  await expect(kds).toBeVisible();
+  await expect(kds.getByText('POS')).toBeVisible();
+  await expect(kds.getByText('Wagyu Beef Burger')).toBeVisible();
+
+  // …and the guests at that table see it on their bill.
+  const diner = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+  await diner.goto(`/t/${tableId}/orders?k=${token}`);
+  await expect(diner.getByRole('heading', { name: new RegExp(`Order #${number}`) })).toBeVisible();
+
+  // Voiding it needs a manager; the demo PIN can't approve.
+  await kds.getByRole('button', { name: 'Void order' }).click();
+  await staff.getByRole('button', { name: 'Void order' }).last().click();
+  await expect(staff.getByRole('heading', { name: 'Manager approval' })).toBeVisible();
+  await staff.keyboard.type('1234');
+  await expect(staff.getByText('That manager PIN didn’t match')).toBeVisible();
+  await expect(kds).toBeVisible();
 });

@@ -301,7 +301,11 @@ export function FloorPage() {
                     key={o.id}
                     icon={<HandPlatter className='size-5' />}
                     iconClass='bg-success-soft text-success'
-                    title={`Run #${o.number} to table ${o.tableId}`}
+                    title={
+                      o.type === 'takeaway'
+                        ? `Hand #${o.number} to ${o.customerName ?? 'takeaway'}`
+                        : `Run #${o.number} to table ${o.tableId}`
+                    }
                     meta={`${o.items.reduce((n, i) => n + i.quantity, 0)} items · ready ${relativeTime(o.readyAt ?? o.createdAt)}`}
                     action={
                       <Button

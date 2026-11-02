@@ -71,6 +71,9 @@ export const useMe = () =>
     staleTime: 5 * 60_000,
   });
 
+/** Managers approve voids and destructive changes; everyone else asks one. */
+export const useIsManager = () => useMe().data?.role === 'manager';
+
 export const useStaffOrders = (enabled = true) =>
   useQuery({ queryKey: queryKeys.staffOrders, queryFn: () => api<Order[]>('/staff/orders'), enabled });
 
