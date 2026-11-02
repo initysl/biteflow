@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { sql } from 'drizzle-orm';
 import { ulid } from 'ulid';
-import type { MenuItemInput } from '../../shared/schemas';
+import type { MenuItemInput } from '../../shared/validation';
 import type { DB } from './client';
 import {
   assistanceRequests,
@@ -68,7 +68,8 @@ export const SAMPLE_MENU: MenuItemInput[] = [
   },
   {
     name: 'Wagyu Beef Burger',
-    description: '6oz wagyu patty, aged cheddar, caramelised onion, butter lettuce and truffle mayo on brioche. Served with hand-cut fries.',
+    description:
+      '6oz wagyu patty, aged cheddar, caramelised onion, butter lettuce and truffle mayo on brioche. Served with hand-cut fries.',
     priceCents: 1800,
     category: 'mains',
     station: 'grill',
@@ -203,10 +204,18 @@ const SAMPLE_TABLES = [
 ];
 
 export function seedEssentials(db: DB, opts: { staffPin: string }) {
-  const hasMenu = db.select({ n: sql<number>`count(*)` }).from(menuItems).get()!.n > 0;
+  const hasMenu =
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(menuItems)
+      .get()!.n > 0;
   if (!hasMenu) replaceMenu(db, SAMPLE_MENU);
 
-  const hasTables = db.select({ n: sql<number>`count(*)` }).from(restaurantTables).get()!.n > 0;
+  const hasTables =
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(restaurantTables)
+      .get()!.n > 0;
   if (!hasTables) {
     SAMPLE_TABLES.forEach((t, i) =>
       db
@@ -224,10 +233,14 @@ export function seedEssentials(db: DB, opts: { staffPin: string }) {
     .onConflictDoNothing()
     .run();
 
-  const hasStaff = db.select({ n: sql<number>`count(*)` }).from(staffUsers).get()!.n > 0;
+  const hasStaff =
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(staffUsers)
+      .get()!.n > 0;
   if (!hasStaff) {
     db.insert(staffUsers)
-      .values({ id: ulid(), name: 'Floor Manager', pinHash: bcrypt.hashSync(opts.staffPin, 10) })
+      .values({ id: ulid(), name: 'Manager', pinHash: bcrypt.hashSync(opts.staffPin, 10) })
       .run();
   }
 }
@@ -237,9 +250,7 @@ export function seedDemoActivity(db: DB) {
   const menu = listMenu(db);
   const pick = (name: string) => menu.find((m) => m.name === name)?.id;
   const order = (tableId: string, items: [string, number][], notes?: string) => {
-    const lines = items
-      .map(([name, quantity]) => ({ menuItemId: pick(name)!, quantity }))
-      .filter((l) => l.menuItemId);
+    const lines = items.map(([name, quantity]) => ({ menuItemId: pick(name)!, quantity })).filter((l) => l.menuItemId);
     if (!lines.length) return null;
     return placeOrder(db, {
       tableId,
@@ -249,41 +260,74 @@ export function seedDemoActivity(db: DB) {
       paymentMethod: 'counter',
     });
   };
-  const backdate = (id: string, minutesAgo: number) =>
+  const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
+  /** Rewrites an order's timeline (minutes ago) so reports and timers look like a real service. */
+  const backdate = (id: string, t: { created: number; preparing?: number; ready?: number; served?: number; paid?: number }) =>
     db
       .update(orders)
-      .set({ createdAt: new Date(Date.now() - minutesAgo * 60_000).toISOString() })
+      .set({
+        createdAt: ago(t.created),
+        ...(t.preparing !== undefined && { preparingAt: ago(t.preparing) }),
+        ...(t.ready !== undefined && { readyAt: ago(t.ready) }),
+        ...(t.served !== undefined && { servedAt: ago(t.served) }),
+        ...(t.paid !== undefined && { paidAt: ago(t.paid) }),
+      })
       .where(sql`${orders.id} = ${id}`)
       .run();
 
-  const a = order('3', [['Wagyu Beef Burger', 2], ['House Mint Lemonade', 2]], 'One burger medium-rare, no pickles.');
+  const a = order(
+    '3',
+    [
+      ['Wagyu Beef Burger', 2],
+      ['House Mint Lemonade', 2],
+    ],
+    'One burger medium-rare, no pickles.',
+  );
   if (a) {
-    backdate(a.id, 14);
     transitionOrder(db, a.id, 'preparing');
+    backdate(a.id, { created: 14, preparing: 11 });
   }
-  const b = order('5', [['Truffle Garlic Bread', 1], ['Wild Mushroom Risotto', 1], ['Cabernet Sauvignon', 1]], 'Extra parmesan on the risotto.');
-  if (b) backdate(b.id, 4);
-  const c = order('2', [['Chargrilled Chicken Skewers', 1], ['Iced Vanilla Latte', 1]]);
+  const b = order(
+    '5',
+    [
+      ['Truffle Garlic Bread', 1],
+      ['Wild Mushroom Risotto', 1],
+      ['Cabernet Sauvignon', 1],
+    ],
+    'Extra parmesan on the risotto.',
+  );
+  if (b) backdate(b.id, { created: 4 });
+  const c = order('2', [
+    ['Chargrilled Chicken Skewers', 1],
+    ['Iced Vanilla Latte', 1],
+  ]);
   if (c) {
-    backdate(c.id, 22);
     transitionOrder(db, c.id, 'preparing');
     transitionOrder(db, c.id, 'ready');
+    backdate(c.id, { created: 16, preparing: 14, ready: 2 });
   }
-  const d = order('4', [['Pan-Seared Salmon', 2], ['Classic Tiramisu', 2]]);
+  const d = order('4', [
+    ['Pan-Seared Salmon', 2],
+    ['Classic Tiramisu', 2],
+  ]);
   if (d) {
-    backdate(d.id, 41);
     transitionOrder(db, d.id, 'preparing');
     transitionOrder(db, d.id, 'ready');
     transitionOrder(db, d.id, 'served');
+    backdate(d.id, { created: 52, preparing: 49, ready: 33, served: 31 });
     requestBill(db, '4', 'even', 2);
   }
-  const e = order('6', [['Wood-Fired Pizza Bianca', 2], ['Harvest Garden Bowl', 1], ['Fresh Orange Juice', 3]]);
+  const e = order('6', [
+    ['Wood-Fired Pizza Bianca', 2],
+    ['Harvest Garden Bowl', 1],
+    ['Fresh Orange Juice', 3],
+  ]);
   if (e) {
-    backdate(e.id, 70);
     transitionOrder(db, e.id, 'preparing');
     transitionOrder(db, e.id, 'ready');
     markOrderPaid(db, e.id, 'counter');
     transitionOrder(db, e.id, 'served');
+    backdate(e.id, { created: 95, preparing: 92, ready: 78, served: 76, paid: 40 });
   }
   requestAssistance(db, '3', 'water');
 }
@@ -301,6 +345,10 @@ export function resetDemo(db: DB) {
 }
 
 export function isEmptyOfOrders(db: DB) {
-  return db.select({ n: sql<number>`count(*)` }).from(orders).get()!.n === 0;
+  return (
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(orders)
+      .get()!.n === 0
+  );
 }
-

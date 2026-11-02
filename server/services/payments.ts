@@ -48,7 +48,10 @@ export function stripeProvider(secretKey: string, webhookSecret?: string): Payme
               unit_amount: order.totalCents,
               product_data: {
                 name: `${restaurantName} — order #${order.number}`,
-                description: order.items.map((i) => `${i.quantity}× ${i.name}`).join(', ').slice(0, 500),
+                description: order.items
+                  .map((i) => `${i.quantity}× ${i.name}`)
+                  .join(', ')
+                  .slice(0, 500),
               },
             },
           },

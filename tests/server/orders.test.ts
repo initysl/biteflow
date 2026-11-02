@@ -28,7 +28,12 @@ describe('placing orders', () => {
     const { app, item } = makeTestApp();
     const res = await request(app)
       .post('/api/orders')
-      .send({ tableId: '3', token: 'nope', paymentMethod: 'counter', items: [{ menuItemId: item('Classic Tiramisu').id, quantity: 1 }] })
+      .send({
+        tableId: '3',
+        token: 'nope',
+        paymentMethod: 'counter',
+        items: [{ menuItemId: item('Classic Tiramisu').id, quantity: 1 }],
+      })
       .expect(403);
     expect(res.body.error).toMatch(/scan the QR code/i);
   });
@@ -70,7 +75,12 @@ describe('placing orders', () => {
     const { app, token, item, events } = makeTestApp();
     const placed = await request(app)
       .post('/api/orders')
-      .send({ tableId: '2', token: token('2'), paymentMethod: 'card', items: [{ menuItemId: item('Classic Tiramisu').id, quantity: 1 }] })
+      .send({
+        tableId: '2',
+        token: token('2'),
+        paymentMethod: 'card',
+        items: [{ menuItemId: item('Classic Tiramisu').id, quantity: 1 }],
+      })
       .expect(201);
     expect(placed.body.order.status).toBe('awaiting_payment');
     expect(events.filter((e) => e.event.type === 'order.upserted')).toHaveLength(0);
@@ -88,7 +98,12 @@ describe('placing orders', () => {
     const send = () =>
       request(app)
         .post('/api/orders')
-        .send({ tableId: '1', token: token('1'), paymentMethod: 'counter', items: [{ menuItemId: item('Classic Tiramisu').id, quantity: 1 }] });
+        .send({
+          tableId: '1',
+          token: token('1'),
+          paymentMethod: 'counter',
+          items: [{ menuItemId: item('Classic Tiramisu').id, quantity: 1 }],
+        });
     const a = await send();
     const b = await send();
     expect(b.body.order.number).toBe(a.body.order.number + 1);
@@ -100,7 +115,12 @@ describe('order lifecycle', () => {
     const t = makeTestApp();
     const res = await request(t.app)
       .post('/api/orders')
-      .send({ tableId: '5', token: t.token('5'), paymentMethod: 'counter', items: [{ menuItemId: t.item('Wagyu Beef Burger').id, quantity: 1 }] });
+      .send({
+        tableId: '5',
+        token: t.token('5'),
+        paymentMethod: 'counter',
+        items: [{ menuItemId: t.item('Wagyu Beef Burger').id, quantity: 1 }],
+      });
     return { ...t, order: res.body.order, staff: await t.staffAgent() };
   }
 
@@ -124,7 +144,10 @@ describe('order lifecycle', () => {
     for (const status of ['preparing', 'ready', 'served']) {
       await staff.patch(`/api/staff/orders/${order.id}`).send({ status }).expect(200);
     }
-    await request(app).post('/api/bill-requests').send({ tableId: '5', token: token('5'), split: 'even', people: 3 }).expect(201);
+    await request(app)
+      .post('/api/bill-requests')
+      .send({ tableId: '5', token: token('5'), split: 'even', people: 3 })
+      .expect(201);
 
     let tables = await staff.get('/api/staff/tables').expect(200);
     expect(tables.body.find((t: { id: string }) => t.id === '5')).toMatchObject({
@@ -145,6 +168,9 @@ describe('order lifecycle', () => {
 
   it('won’t take a bill request when nothing is owed', async () => {
     const { app, token } = makeTestApp();
-    await request(app).post('/api/bill-requests').send({ tableId: '7', token: token('7'), split: 'single' }).expect(409);
+    await request(app)
+      .post('/api/bill-requests')
+      .send({ tableId: '7', token: token('7'), split: 'single' })
+      .expect(409);
   });
 });

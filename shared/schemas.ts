@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 // ---------------------------------------------------------------------------
 // Enumerations
 // ---------------------------------------------------------------------------
@@ -73,15 +71,7 @@ export const ALLERGEN_LABELS: Record<Allergen, string> = {
  * kitchen once paid; pay-at-table orders start in `pending`.
  * `completed` is reached automatically once an order is both served and paid.
  */
-export const ORDER_STATUSES = [
-  'awaiting_payment',
-  'pending',
-  'preparing',
-  'ready',
-  'served',
-  'completed',
-  'cancelled',
-] as const;
+export const ORDER_STATUSES = ['awaiting_payment', 'pending', 'preparing', 'ready', 'served', 'completed', 'cancelled'] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 /** Statuses staff can move an order to by hand, keyed by current status. */
@@ -203,10 +193,14 @@ export interface Quote {
 
 export interface AppConfig {
   restaurantName: string;
+  /** Public base URL encoded into table QR codes. */
+  appUrl: string;
   currency: string;
   locale: string;
   paymentProvider: 'stripe' | 'demo';
   demoMode: boolean;
+  /** Only present in demo mode, so visitors can try the staff console. */
+  demoPin?: string;
 }
 
 export interface StaffUser {
@@ -226,95 +220,3 @@ export interface ReportSummary {
   topItems: { name: string; quantity: number; revenueCents: number }[];
   ordersByHour: { hour: number; orders: number; revenueCents: number }[];
 }
-
-// ---------------------------------------------------------------------------
-// Request payloads (client → server), validated with zod
-// ---------------------------------------------------------------------------
-
-const trimmedOptional = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .optional()
-    .transform((v) => (v ? v : undefined));
-
-export const tableIdSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(16)
-  .regex(/^[a-z0-9-]+$/i, 'Use letters, numbers and dashes only');
-
-export const cartLineSchema = z.object({
-  menuItemId: z.string().min(1).max(64),
-  quantity: z.number().int().min(1).max(50),
-  note: trimmedOptional(140),
-});
-
-export const quoteInputSchema = z.object({
-  items: z.array(cartLineSchema).min(1).max(50),
-  promoCode: trimmedOptional(32),
-});
-export type QuoteInput = z.input<typeof quoteInputSchema>;
-
-export const placeOrderSchema = quoteInputSchema.extend({
-  tableId: tableIdSchema,
-  token: z.string().min(1).max(64),
-  notes: trimmedOptional(280),
-  paymentMethod: z.enum(PAYMENT_METHODS),
-});
-export type PlaceOrderInput = z.input<typeof placeOrderSchema>;
-
-export const menuItemInputSchema = z.object({
-  name: z.string().trim().min(2).max(80),
-  description: z.string().trim().max(400).default(''),
-  priceCents: z.number().int().min(0).max(1_000_00),
-  category: z.enum(CATEGORIES),
-  station: z.enum(STATIONS),
-  imageUrl: z
-    .string()
-    .trim()
-    .url()
-    .max(500)
-    .nullable()
-    .or(z.literal('').transform(() => null))
-    .default(null),
-  dietary: z.array(z.enum(DIETARY)).default([]),
-  allergens: z.array(z.enum(ALLERGENS)).nullable().default(null),
-  available: z.boolean().default(true),
-  featured: z.boolean().default(false),
-});
-export type MenuItemInput = z.input<typeof menuItemInputSchema>;
-
-export const tableInputSchema = z.object({
-  id: tableIdSchema,
-  label: z.string().trim().min(1).max(40),
-  seats: z.number().int().min(1).max(40),
-});
-export type TableInput = z.input<typeof tableInputSchema>;
-
-export const tableUpdateSchema = tableInputSchema.omit({ id: true }).partial();
-
-export const orderStatusUpdateSchema = z.object({
-  status: z.enum(ORDER_STATUSES),
-});
-
-export const tableAuthSchema = z.object({
-  tableId: tableIdSchema,
-  token: z.string().min(1).max(64),
-});
-
-export const assistanceInputSchema = tableAuthSchema.extend({
-  type: z.enum(ASSISTANCE_TYPES),
-  note: trimmedOptional(140),
-});
-
-export const billRequestInputSchema = tableAuthSchema.extend({
-  split: z.enum(SPLIT_TYPES),
-  people: z.number().int().min(1).max(40).default(1),
-});
-
-export const loginSchema = z.object({
-  pin: z.string().regex(/^\d{4,8}$/, 'PIN must be 4–8 digits'),
-});

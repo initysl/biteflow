@@ -13,9 +13,7 @@ export type ServerEvent =
 
 /** Messages a client may send. */
 export type ClientEvent =
-  | { type: 'ping' }
-  | { type: 'subscribe'; room: 'staff' }
-  | { type: 'subscribe'; room: 'table'; tableId: string; token: string };
+  { type: 'ping' } | { type: 'subscribe'; room: 'staff' } | { type: 'subscribe'; room: 'table'; tableId: string; token: string };
 
 export const staffRoom = 'staff';
 export const tableRoom = (tableId: string) => `table:${tableId}`;

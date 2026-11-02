@@ -1,6 +1,382 @@
-@import url('https://fonts.googleapis.com/css2?family=Changa:wght@300;400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
+/*
+ * Design tokens. Components use the semantic names (bg-canvas, text-ink-muted…)
+ * so light/dark switching happens here and nowhere else.
+ */
+
 :root {
-  --font-changa: 'Changa', sans-serif;
+  color-scheme: light;
+  --canvas: #faf6ef;
+  --surface: #fffdf9;
+  --surface-2: #f3ede3;
+  --surface-3: #ebe3d6;
+  --ink: #1f1b16;
+  --ink-muted: #6b6158;
+  --ink-subtle: #8f8378;
+  --line: #e6ddcf;
+  --line-strong: #d3c7b6;
+  --accent: #b8502a;
+  --accent-hover: #a14522;
+  --accent-soft: #f6e4da;
+  --accent-ink: #8a3818;
+  --chart: #b8502a;
+  --on-accent: #ffffff;
+  --on-danger: #ffffff;
+  --success: #4c6a36;
+  --success-soft: #e4ecd8;
+  --warning: #9a6512;
+  --warning-soft: #f8ebd2;
+  --danger: #b0372b;
+  --danger-soft: #f7deda;
+  --info: #35567e;
+  --info-soft: #e0e8f2;
+  --overlay: rgb(31 27 22 / 0.45);
+  --shadow-color: 32 24 16;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --canvas: #14110e;
+    --surface: #1c1915;
+    --surface-2: #25211c;
+    --surface-3: #2f2a24;
+    --ink: #f3ece2;
+    --ink-muted: #b8ab9d;
+    --ink-subtle: #8c8073;
+    --line: #342e27;
+    --line-strong: #4a4239;
+    --accent: #e27b4f;
+    --accent-hover: #ec8f68;
+    --accent-soft: #3b2419;
+    --accent-ink: #f4b597;
+    --chart: #d9703f;
+    --on-accent: #1a0f08;
+    --on-danger: #1f0b08;
+    --success: #9fbe80;
+    --success-soft: #232c1c;
+    --warning: #e5b260;
+    --warning-soft: #33291a;
+    --danger: #ec7d70;
+    --danger-soft: #3b201c;
+    --info: #92b2da;
+    --info-soft: #1d2633;
+    --overlay: rgb(0 0 0 / 0.6);
+    --shadow-color: 0 0 0;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --canvas: #14110e;
+  --surface: #1c1915;
+  --surface-2: #25211c;
+  --surface-3: #2f2a24;
+  --ink: #f3ece2;
+  --ink-muted: #b8ab9d;
+  --ink-subtle: #8c8073;
+  --line: #342e27;
+  --line-strong: #4a4239;
+  --accent: #e27b4f;
+  --accent-hover: #ec8f68;
+  --accent-soft: #3b2419;
+  --accent-ink: #f4b597;
+  --chart: #d9703f;
+  --on-accent: #1a0f08;
+  --on-danger: #1f0b08;
+  --success: #9fbe80;
+  --success-soft: #232c1c;
+  --warning: #e5b260;
+  --warning-soft: #33291a;
+  --danger: #ec7d70;
+  --danger-soft: #3b201c;
+  --info: #92b2da;
+  --info-soft: #1d2633;
+  --overlay: rgb(0 0 0 / 0.6);
+  --shadow-color: 0 0 0;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-chart: var(--chart);
+  --color-on-accent: var(--on-accent);
+  --color-on-danger: var(--on-danger);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-overlay: var(--overlay);
+
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Fraunces Variable', ui-serif, Georgia, 'Times New Roman', serif;
+
+  --shadow-card: 0 1px 2px rgb(var(--shadow-color) / 0.05), 0 1px 1px rgb(var(--shadow-color) / 0.03);
+  --shadow-raised: 0 2px 4px rgb(var(--shadow-color) / 0.04), 0 8px 24px -6px rgb(var(--shadow-color) / 0.12);
+  --shadow-float: 0 4px 8px rgb(var(--shadow-color) / 0.06), 0 24px 48px -12px rgb(var(--shadow-color) / 0.28);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .font-display {
+    font-optical-sizing: auto;
+    font-variation-settings:
+      'SOFT' 50,
+      'WONK' 0;
+  }
+  /* Scale-on-press feedback for anything tappable. */
+  .pressable {
+    transition: transform 160ms var(--ease-out);
+  }
+  .pressable:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+/* Overlay + panel motion for Radix dialogs/sheets (Radix waits for exit animations). */
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes overlay-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes sheet-up-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes sheet-up-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes sheet-right-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes sheet-right-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+}
+@keyframes dialog-out {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+}
+@keyframes pop {
+  50% {
+    transform: scale(1.18);
+  }
+}
+@keyframes shake {
+  20%,
+  60% {
+    transform: translateX(-8px);
+  }
+  40%,
+  80% {
+    transform: translateX(8px);
+  }
+}
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+
+.overlay[data-state='open'] {
+  animation: overlay-in 240ms var(--ease-out);
+}
+.overlay[data-state='closed'] {
+  animation: overlay-out 180ms var(--ease-out);
+}
+.sheet-bottom[data-state='open'] {
+  animation: sheet-up-in 380ms var(--ease-drawer);
+}
+.sheet-bottom[data-state='closed'] {
+  animation: sheet-up-out 220ms var(--ease-out);
+}
+.sheet-right[data-state='open'] {
+  animation: sheet-right-in 380ms var(--ease-drawer);
+}
+.sheet-right[data-state='closed'] {
+  animation: sheet-right-out 220ms var(--ease-out);
+}
+.dialog[data-state='open'] {
+  animation: dialog-in 220ms var(--ease-out);
+}
+.dialog[data-state='closed'] {
+  animation: dialog-out 150ms var(--ease-out);
+}
+.animate-pop {
+  animation: pop 260ms var(--ease-out);
+}
+.animate-arrive {
+  animation: arrive 260ms var(--ease-out) both;
+}
+.animate-pulse-ring {
+  animation: pulse-ring 1.6s var(--ease-out) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-bottom[data-state],
+  .sheet-right[data-state],
+  .dialog[data-state] {
+    animation-name: overlay-in;
+    animation-duration: 150ms;
+  }
+  .sheet-bottom[data-state='closed'],
+  .sheet-right[data-state='closed'],
+  .dialog[data-state='closed'] {
+    animation-name: overlay-out;
+  }
+  .animate-pop,
+  .animate-arrive,
+  .animate-pulse-ring {
+    animation: none;
+  }
+  .pressable:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+@media print {
+  body {
+    background: white;
+  }
+  .no-print {
+    display: none !important;
+  }
+  /* When a receipt is open, print just the receipt. */
+  body:has(#receipt) * {
+    visibility: hidden;
+  }
+  body:has(#receipt) #receipt,
+  body:has(#receipt) #receipt * {
+    visibility: visible;
+  }
+  body:has(#receipt) #receipt {
+    position: fixed;
+    inset: 0 0 auto 0;
+    border: none;
+  }
+}
+
+/* Sheets that are bottom drawers on phones and side panels from tablet up. */
+.sheet-auto[data-state='open'] {
+  animation: sheet-up-in 380ms var(--ease-drawer);
+}
+.sheet-auto[data-state='closed'] {
+  animation: sheet-up-out 220ms var(--ease-out);
+}
+@media (min-width: 768px) {
+  .sheet-auto[data-state='open'] {
+    animation-name: sheet-right-in;
+  }
+  .sheet-auto[data-state='closed'] {
+    animation-name: sheet-right-out;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet-auto[data-state='open'] {
+    animation: overlay-in 150ms ease;
+  }
+  .sheet-auto[data-state='closed'] {
+    animation: overlay-out 150ms ease;
+  }
+}
+
+/* Table-tent QR sheet: only exists while printing. */
+#qr-sheet {
+  display: none;
+}
+@media print {
+  body:has(#qr-sheet) > *:not(#qr-sheet) {
+    display: none !important;
+  }
+  #qr-sheet {
+    display: grid;
+  }
 }

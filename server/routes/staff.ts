@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { menuItemInputSchema, orderStatusUpdateSchema } from '../../shared/schemas';
+import { menuItemInputSchema, orderStatusUpdateSchema } from '../../shared/validation';
 import { requireStaff } from '../auth';
 import { type AppContext, emitAssistance, emitMenu, emitOrder, emitTables } from '../context';
 import { resetDemo } from '../db/seed';

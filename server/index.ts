@@ -16,9 +16,7 @@ async function main() {
 
   const server = http.createServer();
   const realtime = createRealtime(server, db);
-  const payments = config.stripeSecretKey
-    ? stripeProvider(config.stripeSecretKey, config.stripeWebhookSecret)
-    : demoProvider;
+  const payments = config.stripeSecretKey ? stripeProvider(config.stripeSecretKey, config.stripeWebhookSecret) : demoProvider;
 
   const ctx: AppContext = { db, config, realtime, payments };
   const app = createApp(ctx);

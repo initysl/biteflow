@@ -48,7 +48,9 @@ describe('assistance', () => {
       .expect(201);
 
     // A second tap shouldn't create a duplicate.
-    const again = await request(app).post('/api/assistance').send({ tableId: '4', token: token('4'), type: 'water' });
+    const again = await request(app)
+      .post('/api/assistance')
+      .send({ tableId: '4', token: token('4'), type: 'water' });
     expect(again.body.id).toBe(created.body.id);
 
     events.length = 0;
@@ -56,7 +58,9 @@ describe('assistance', () => {
     await staff.post(`/api/staff/assistance/${created.body.id}/resolve`).expect(200);
     expect(events).toContainEqual({ audience: 'table:4', event: { type: 'assistance.changed', tableId: '4' } });
 
-    const open = await request(app).get(`/api/tables/4/assistance?k=${token('4')}`).expect(200);
+    const open = await request(app)
+      .get(`/api/tables/4/assistance?k=${token('4')}`)
+      .expect(200);
     expect(open.body).toEqual([]);
   });
 });
@@ -89,7 +93,10 @@ describe('menu admin', () => {
       .expect(201);
     expect(events.some((e) => e.event.type === 'menu.changed')).toBe(true);
     const menu = await request(app).get('/api/menu').expect(200);
-    expect(menu.body.find((m: { name: string }) => m.name === 'Burrata')).toMatchObject({ priceCents: 1150, allergens: ['milk'] });
+    expect(menu.body.find((m: { name: string }) => m.name === 'Burrata')).toMatchObject({
+      priceCents: 1150,
+      allergens: ['milk'],
+    });
   });
 });
 
@@ -103,7 +110,12 @@ describe('tables admin', () => {
 
     await request(app)
       .post('/api/orders')
-      .send({ tableId: '2', token: old, paymentMethod: 'counter', items: [{ menuItemId: item('Classic Tiramisu').id, quantity: 1 }] })
+      .send({
+        tableId: '2',
+        token: old,
+        paymentMethod: 'counter',
+        items: [{ menuItemId: item('Classic Tiramisu').id, quantity: 1 }],
+      })
       .expect(403);
   });
 
@@ -111,7 +123,12 @@ describe('tables admin', () => {
     const { app, token, item, staffAgent } = makeTestApp();
     await request(app)
       .post('/api/orders')
-      .send({ tableId: '1', token: token('1'), paymentMethod: 'counter', items: [{ menuItemId: item('Classic Tiramisu').id, quantity: 3 }] })
+      .send({
+        tableId: '1',
+        token: token('1'),
+        paymentMethod: 'counter',
+        items: [{ menuItemId: item('Classic Tiramisu').id, quantity: 3 }],
+      })
       .expect(201);
     const staff = await staffAgent();
     const res = await staff.get('/api/staff/reports/summary').expect(200);

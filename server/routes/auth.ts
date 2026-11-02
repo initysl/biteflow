@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
-import { loginSchema } from '../../shared/schemas';
+import { loginSchema } from '../../shared/validation';
 import { SESSION_COOKIE, createSession, destroySession, userForToken, verifyPin } from '../auth';
 import type { AppContext } from '../context';
 import { HttpError, asyncHandler, parse } from '../http';

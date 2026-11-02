@@ -1,4 +1,5 @@
-import type { Category, MenuItemInput, Station } from '../../shared/schemas';
+import type { Category, Station } from '../../shared/schemas';
+import type { MenuItemInput } from '../../shared/validation';
 
 /**
  * Builds a sample menu from TheMealDB and TheCocktailDB. Imported dishes come
@@ -40,8 +41,7 @@ const firstSentence = (text: string | undefined, fallback: string) => {
 };
 
 /** Stable pseudo-price derived from the source id, rounded to 50¢. */
-const priceFromId = (id: string, min: number, spread: number) =>
-  min + ((parseInt(id, 10) || 0) % spread) * 50;
+const priceFromId = (id: string, min: number, spread: number) => min + ((parseInt(id, 10) || 0) % spread) * 50;
 
 export async function fetchSampleMenu(): Promise<MenuItemInput[]> {
   const items: MenuItemInput[] = [];
@@ -49,9 +49,7 @@ export async function fetchSampleMenu(): Promise<MenuItemInput[]> {
   await Promise.all(
     MEAL_SEARCHES.map(async ({ term, category, station }) => {
       try {
-        const data = await fetchJson<{ meals: Meal[] | null }>(
-          `https://www.themealdb.com/api/json/v1/1/search.php?s=${term}`,
-        );
+        const data = await fetchJson<{ meals: Meal[] | null }>(`https://www.themealdb.com/api/json/v1/1/search.php?s=${term}`);
         for (const meal of (data.meals ?? []).slice(0, 3)) {
           items.push({
             name: meal.strMeal,

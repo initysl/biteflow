@@ -20,9 +20,7 @@ export function summary(db: DB, from: Date = startOfToday()): ReportSummary {
   const paid = todays.filter((o) => o.paymentStatus === 'paid');
   const revenueCents = paid.reduce((s, o) => s + o.totalCents, 0);
 
-  const prepMinutes = todays
-    .filter((o) => o.readyAt)
-    .map((o) => (Date.parse(o.readyAt!) - Date.parse(o.createdAt)) / 60_000);
+  const prepMinutes = todays.filter((o) => o.readyAt).map((o) => (Date.parse(o.readyAt!) - Date.parse(o.createdAt)) / 60_000);
   const averagePrepMinutes = prepMinutes.length
     ? Math.round((prepMinutes.reduce((a, b) => a + b, 0) / prepMinutes.length) * 10) / 10
     : null;

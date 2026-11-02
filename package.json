@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --clear-screen=false --ignore \"src/**\" --ignore \"vite.config.ts*\" server/index.ts",
+    "dev": "NODE_ENV=development tsx watch --clear-screen=false --ignore \"src/**\" --ignore \"vite.config.ts*\" server/index.ts",
     "build": "vite build && esbuild server/index.ts --bundle --platform=node --format=esm --packages=external --sourcemap --outfile=dist/server/index.js && rm -rf dist/server/migrations && cp -r server/db/migrations dist/server/migrations",
     "start": "NODE_ENV=production node --enable-source-maps dist/server/index.js",
     "typecheck": "tsc --noEmit",

@@ -1,0 +1,10 @@
+{
+  "name": "BiteFlow",
+  "short_name": "BiteFlow",
+  "description": "QR table ordering and kitchen display",
+  "start_url": "/staff",
+  "display": "standalone",
+  "background_color": "#faf6ef",
+  "theme_color": "#faf6ef",
+  "icons": [{ "src": "/bitflow.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

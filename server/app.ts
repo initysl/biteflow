@@ -23,6 +23,8 @@ export function createApp(ctx: AppContext) {
               'img-src': ["'self'", 'data:', 'blob:', 'https:'],
               'connect-src': ["'self'", 'ws:', 'wss:'],
               'form-action': ["'self'", 'https://checkout.stripe.com'],
+              // Only force HTTPS sub-resources when the app is actually served over HTTPS.
+              'upgrade-insecure-requests': ctx.config.appUrl.startsWith('https://') ? [] : null,
             },
           }
         : false,

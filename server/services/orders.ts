@@ -6,10 +6,9 @@ import {
   type BillRequest,
   type Order,
   type OrderStatus,
-  type PlaceOrderInput,
   type SplitType,
-  placeOrderSchema,
 } from '../../shared/schemas';
+import { type PlaceOrderInput, placeOrderSchema } from '../../shared/validation';
 import type { DB } from '../db/client';
 import { billRequests, orderItems, orders } from '../db/schema';
 import { badRequest, conflict, notFound, parse } from '../http';
@@ -90,7 +89,10 @@ export function listTableOrders(db: DB, tableId: string, includeIds: string[] = 
 }
 
 function nextOrderNumber(db: DB): number {
-  const row = db.select({ n: max(orders.number) }).from(orders).get();
+  const row = db
+    .select({ n: max(orders.number) })
+    .from(orders)
+    .get();
   return Math.max(1000, row?.n ?? 0) + 1;
 }
 
@@ -215,7 +217,9 @@ export function requestBill(db: DB, tableId: string, split: SplitType, people: n
   if (existing) {
     db.update(billRequests).set(values).where(eq(billRequests.id, existing.id)).run();
   } else {
-    db.insert(billRequests).values({ id: ulid(), tableId, ...values, createdAt: now() }).run();
+    db.insert(billRequests)
+      .values({ id: ulid(), tableId, ...values, createdAt: now() })
+      .run();
   }
   return activeBillRequest(db, tableId)!;
 }

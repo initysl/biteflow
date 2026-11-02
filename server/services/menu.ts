@@ -1,6 +1,7 @@
 import { asc, eq } from 'drizzle-orm';
 import { ulid } from 'ulid';
-import { CATEGORIES, type MenuItem, type MenuItemInput, menuItemInputSchema } from '../../shared/schemas';
+import { CATEGORIES, type MenuItem } from '../../shared/schemas';
+import { type MenuItemInput, menuItemInputSchema } from '../../shared/validation';
 import type { DB } from '../db/client';
 import { menuItems } from '../db/schema';
 import { notFound, parse } from '../http';
@@ -45,7 +46,12 @@ export function replaceMenu(db: DB, items: MenuItemInput[]): MenuItem[] {
   const parsed = items.map((i) => parse(menuItemInputSchema, i));
   db.transaction((tx) => {
     tx.delete(menuItems).run();
-    parsed.forEach((data, i) => tx.insert(menuItems).values({ id: ulid(), ...data, sortOrder: i }).run());
+    parsed.forEach((data, i) =>
+      tx
+        .insert(menuItems)
+        .values({ id: ulid(), ...data, sortOrder: i })
+        .run(),
+    );
   });
   return listMenu(db);
 }

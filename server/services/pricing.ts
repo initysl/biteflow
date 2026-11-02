@@ -1,6 +1,7 @@
 import { eq, inArray } from 'drizzle-orm';
 import { formatPrice } from '../../shared/money';
-import type { MenuItem, Quote, QuoteInput } from '../../shared/schemas';
+import type { MenuItem, Quote } from '../../shared/schemas';
+import type { QuoteInput } from '../../shared/validation';
 import type { DB } from '../db/client';
 import { menuItems, promoCodes } from '../db/schema';
 import { badRequest, conflict } from '../http';

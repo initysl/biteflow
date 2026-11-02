@@ -20,6 +20,10 @@ export const config = {
   stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET || '',
 };
 
+if (!/^\d{4}$/.test(config.staffDemoPin)) {
+  throw new Error('STAFF_DEMO_PIN must be exactly 4 digits');
+}
+
 if (isProduction && config.demoMode && config.staffDemoPin === '1234') {
   console.warn('[config] DEMO_MODE is on in production with the default staff PIN. Set STAFF_DEMO_PIN.');
 }

@@ -1,14 +1,7 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
-import {
-  OPEN_STATUSES,
-  type BillRequest,
-  type RestaurantTable,
-  type TableInput,
-  type TableWithToken,
-  tableInputSchema,
-  tableUpdateSchema,
-} from '../../shared/schemas';
+import { OPEN_STATUSES, type BillRequest, type RestaurantTable, type TableWithToken } from '../../shared/schemas';
+import { type TableInput, tableInputSchema, tableUpdateSchema } from '../../shared/validation';
 import type { DB } from '../db/client';
 import { billRequests, orders, restaurantTables } from '../db/schema';
 import { HttpError, conflict, notFound, parse } from '../http';
@@ -49,9 +42,7 @@ function summarise(db: DB, rows: TableRow[]): TableWithToken[] {
     // Unpaid card checkouts don't seat a table — they never reached the kitchen.
     const tableOrders = open.filter((o) => o.tableId === t.id && o.status !== 'awaiting_payment');
     const bill = bills.find((b) => b.tableId === t.id);
-    const openTotalCents = tableOrders
-      .filter((o) => o.paymentStatus === 'unpaid')
-      .reduce((s, o) => s + o.totalCents, 0);
+    const openTotalCents = tableOrders.filter((o) => o.paymentStatus === 'unpaid').reduce((s, o) => s + o.totalCents, 0);
     return {
       id: t.id,
       label: t.label,
@@ -97,7 +88,9 @@ export function createTable(db: DB, input: TableInput): TableWithToken {
   const exists = db.select({ id: restaurantTables.id }).from(restaurantTables).where(eq(restaurantTables.id, data.id)).get();
   if (exists) throw conflict(`Table ${data.id} already exists`);
   const count = db.select({ id: restaurantTables.id }).from(restaurantTables).all().length;
-  db.insert(restaurantTables).values({ ...data, token: newTableToken(), sortOrder: count }).run();
+  db.insert(restaurantTables)
+    .values({ ...data, token: newTableToken(), sortOrder: count })
+    .run();
   return getTable(db, data.id);
 }
 

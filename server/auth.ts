@@ -23,12 +23,17 @@ export function createSession(db: DB, userId: string, ttlHours: number): { token
   const token = randomBytes(32).toString('base64url');
   const expiresAt = new Date(Date.now() + ttlHours * 3600_000);
   db.delete(sessions).where(lt(sessions.expiresAt, new Date().toISOString())).run();
-  db.insert(sessions).values({ id: hashToken(token), userId, expiresAt: expiresAt.toISOString() }).run();
+  db.insert(sessions)
+    .values({ id: hashToken(token), userId, expiresAt: expiresAt.toISOString() })
+    .run();
   return { token, expiresAt };
 }
 
 export function destroySession(db: DB, token: string | undefined): void {
-  if (token) db.delete(sessions).where(eq(sessions.id, hashToken(token))).run();
+  if (token)
+    db.delete(sessions)
+      .where(eq(sessions.id, hashToken(token)))
+      .run();
 }
 
 export function userForToken(db: DB, token: string | undefined): StaffUser | null {

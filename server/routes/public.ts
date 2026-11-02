@@ -1,26 +1,19 @@
 import express, { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
+import { type AppConfig } from '../../shared/schemas';
 import {
-  type AppConfig,
   assistanceInputSchema,
   billRequestInputSchema,
   placeOrderSchema,
   quoteInputSchema,
   tableAuthSchema,
-} from '../../shared/schemas';
+} from '../../shared/validation';
 import { type AppContext, emitAssistance, emitOrder, emitTables } from '../context';
 import { HttpError, asyncHandler, badRequest, conflict, parse } from '../http';
 import { listActiveAssistance, requestAssistance } from '../services/assistance';
 import { listMenu } from '../services/menu';
-import {
-  cancelUnpaidCheckout,
-  getOrder,
-  listTableOrders,
-  markOrderPaid,
-  placeOrder,
-  requestBill,
-} from '../services/orders';
+import { cancelUnpaidCheckout, getOrder, listTableOrders, markOrderPaid, placeOrder, requestBill } from '../services/orders';
 import { priceCart } from '../services/pricing';
 import { getTable, listTables, publicTable, verifyTableToken } from '../services/tables';
 
@@ -40,10 +33,12 @@ export function publicRoutes(ctx: AppContext): Router {
   r.get('/config', (_req, res) => {
     const body: AppConfig = {
       restaurantName: config.restaurantName,
+      appUrl: config.appUrl,
       currency: config.currency,
       locale: config.locale,
       paymentProvider: payments.name,
       demoMode: config.demoMode,
+      demoPin: config.demoMode ? config.staffDemoPin : undefined,
     };
     res.json(body);
   });
